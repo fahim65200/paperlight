@@ -146,18 +146,26 @@ def parse_xmlui(page_html, base):
 
 def harvest_xmlui(src):
     base = src["xmlui"].rstrip("/")
-    scopes = [f"{base}/handle/{c}" for c in src.get("xmlui_collections") or []] or [base]
+    scopes = src.get("xmlui_scopes") or [{"path": c, "assume": True} for c in src.get("xmlui_collections") or []] or [{"path": ""}]
     items, seen = [], set()
-    for scope in scopes:
+    for sc in scopes:
+        root = f"{base}/handle/{sc['path']}" if sc.get("path") else base
+        extra = f"&filtertype=type&filter_relational_operator=contains&filter={urllib.parse.quote(sc['type'])}" if sc.get("type") else ""
         for page in range(1, MAX_PAGES + 1):
-            url = f"{scope}/discover?rpp=100&page={page}&sort_by=dc.date.issued_dt&order=desc"
-            got = [i for i in parse_xmlui(get(url, "text/html"), base) if i["url"] not in seen]
+            url = f"{root}/discover?rpp=100&page={page}&sort_by=dc.date.issued_dt&order=desc{extra}"
+            try:
+                got = [i for i in parse_xmlui(get(url, "text/html"), base) if i["url"] not in seen]
+            except Exception as e:
+                log(f"    HTML scope {root} stopped: {e}")
+                break
             if not got:
                 break
             for i in got:
                 seen.add(i["url"])
+                if sc.get("type") or sc.get("assume"):
+                    i["types"] = ["thesis (from repository filter)"]
             items += got
-            log(f"    HTML page {page} of {scope}: {len(items)} records so far")
+            log(f"    HTML page {page} of {root}{' [type=' + sc['type'] + ']' if sc.get('type') else ''}: {len(items)} records so far")
     return items
 
 METHODS = {"oai": harvest_oai, "dspace7": harvest_dspace7, "xmlui": harvest_xmlui}
@@ -178,13 +186,20 @@ METHODS_T = [("GIS", r"\bgis\b|geoinformat|geographic information"), ("Remote se
              ("Modelling", r"model|simulat|wrf|hec-ras|mike"), ("Statistics", r"statistic|regression|correlation|trend|forecast"),
              ("Machine learning", r"machine learning|neural network|deep learning|\bai\b"), ("Case study", r"case study"),
              ("Survey", r"survey|questionnaire|household")]
-FIELDS = [("Disaster & climate", r"disaster|hazard|cyclone|flood|climate|resilien|vulnerab|drought|early warning"),
-          ("Water & environment", r"water|river|salin|arsenic|groundwater|environment|sediment|wetland|ecosystem"),
-          ("Engineering", r"engineer|design|structur|concrete|mechanic|electric|power|material|textile"),
-          ("Computer science", r"comput|software|network|algorithm|machine learning|neural"),
-          ("Health", r"health|medic|disease|patient|hospital|nutrition|pharma"),
-          ("Social science", r"social|gender|poverty|econom|education|policy|governance|livelihood|community"),
-          ("Statistics", r"statistic|regression|stochastic|probabil")]
+FIELDS = [
+ ("Disaster & climate", r"disaster|hazard|cyclone|flood|climate|resilien|vulnerab|drought|early warning|earthquake|landslide|emergency|fire safety"),
+ ("Water & environment", r"water|river|salin|arsenic|groundwater|environment|sediment|wetland|ecosystem|pollut|waste|sanitation|biodiversity|forest|mangrove"),
+ ("Computer science", r"comput|software|network|algorithm|machine learning|neural|deep learning|\bai\b|artificial intelligence|detect|extraction|security system|bangla document|speech|chatbot|data mining|blockchain|iot\b|internet of things|cyber|web\b|android|app\b|database|cloud|image processing|detection using|classification|recognition|nlp|natural language"),
+ ("Health & pharmacy", r"health|medic|disease|patient|hospital|nutrition|pharma|drug|clinical|cancer|diabet|covid|maternal|nursing|antibiot|tuberculosis|depression|geriatric|anesthe|prevalence|elderly|pregnan|dengue|mental|psycholog"),
+ ("Business & economics", r"bank|financ|marketing|customer|consumer|brand|business|compan|firm\b|firms|market|econom|poverty|income|investment|stock|employee|job satisfaction|management practice|human resource|\bhr\b|organization|organisation|sme|entrepreneur|retail|garment|rmg|supply chain|tax|internship report|profitab|loan|microfinance|insurance|telecom|trade|productivity|compensation|public sector|salary|export|import|gdp|inflation|remittance"),
+ ("Architecture & planning", r"architect|design of|redesign|complex|centre|center|housing|homestead|urban|city|planning|residential|campus|museum|terminal|interior|landscape|revitaliz|rehabilitation of|space|building|shelter|pilgrim|shishu|memorial|resort|hub\b|market place|mosque"),
+ ("Language & education", r"english|language|teach|learning|learner|classroom|student|school|education|literature|novel|poem|poetry|efl|esl|vocabulary|writing skill|speaking|reading|translation|curriculum|tertiary|nonfiction|fiction|narrative"),
+ ("Law & governance", r"\blaw\b|legal|rights|court|justice|constitution|act\b|legislat|policy|governance|government|parliament|election|crime|police|human trafficking"),
+ ("Media & social science", r"media|journalis|social|gender|women|child|youth|communit|migra|culture|religio|ngo|livelihood|refugee|rohingya|film|television|advertis"),
+ ("Engineering", r"engineer|structur|concrete|mechanic|electric|power|material|textile|circuit|voltage|antenna|solar|energy|fuel|thermal|heat|fluid|steel|bridge|road|traffic|transport|vehicle|motor|robot|sensor|signal|wireless|communication system|semiconductor|optic|fabric|yarn|device|pile|ground improvement|geotechn|foundation"),
+ ("Maths, stats & physics", r"lattice|ideal|theorem|equation|nearlattice|mathemat|numerical|runge|physic|quantum|magnetic|crystal|plasma|laser|statistic|regression|probabil|stochastic"),
+ ("Biology & agriculture", r"agricult|crop|farm|rice|soil|plant|seed|fish|aquacult|shrimp|livestock|poultry|gene|microb|bacteri|enzyme|biotech|protein|food"),
+]
 
 def tag(text):
     t = text.lower()
@@ -210,20 +225,25 @@ def main():
         if not src.get("enabled", True) or (only and src["id"] not in only):
             continue
         log(f"\n== {src['name']} ==")
-        rows, used, errors = None, None, []
+        rows, used, errors = [], [], []
         for m in src.get("methods", []):
             if m not in METHODS or not src.get(m):
                 continue
             try:
                 log(f"  trying {m} ...")
-                rows = METHODS[m](src)
-                if rows:
-                    used = m
-                    break
-                errors.append(f"{m}: no records")
+                got = METHODS[m](src)
+                if got:
+                    have = {r["url"] for r in rows}
+                    rows += [r for r in got if r.get("url") not in have]
+                    used.append(m)
+                    if not src.get("merge_methods"):
+                        break
+                else:
+                    errors.append(f"{m}: no records")
             except Exception as e:
                 errors.append(f"{m}: {type(e).__name__}: {str(e)[:160]}")
                 log("   failed:", errors[-1])
+        used = "+".join(used) or None
         kept = 0
         for r in rows or []:
             if not r.get("title") or not r.get("url") or EXCLUDE.search(r["title"]):

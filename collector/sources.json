@@ -2,41 +2,94 @@
   "_help": "Repositories to collect from. Add a new block to add a university. methods are tried in order until one works.",
   "sources": [
     {
-      "id": "buet", "name": "BUET", "uni": "BUET", "enabled": true,
-      "methods": ["oai", "xmlui"],
+      "id": "buet",
+      "name": "BUET",
+      "uni": "BUET",
+      "enabled": true,
+      "methods": [
+        "oai",
+        "xmlui"
+      ],
       "oai": "http://lib.buet.ac.bd:8080/oai/request",
       "xmlui": "http://lib.buet.ac.bd:8080/xmlui",
-      "xmlui_collections": ["123456789/640"],
-      "assume_thesis": true
+      "assume_thesis": true,
+      "merge_methods": true,
+      "xmlui_scopes": [
+        {
+          "path": "",
+          "type": "thesis"
+        },
+        {
+          "path": "123456789/640",
+          "assume": true
+        }
+      ]
     },
     {
-      "id": "du", "name": "University of Dhaka", "uni": "University of Dhaka", "enabled": true,
-      "methods": ["oai", "xmlui"],
+      "id": "du",
+      "name": "University of Dhaka",
+      "uni": "University of Dhaka",
+      "enabled": true,
+      "methods": [
+        "oai",
+        "xmlui"
+      ],
       "oai": "http://repository.library.du.ac.bd:8080/oai/request",
       "xmlui": "http://repository.library.du.ac.bd:8080/xmlui",
-      "xmlui_collections": ["123456789/291"],
-      "assume_thesis": false
+      "assume_thesis": false,
+      "merge_methods": true,
+      "xmlui_scopes": [
+        {
+          "path": "",
+          "type": "thesis"
+        },
+        {
+          "path": "123456789/291",
+          "assume": true
+        }
+      ]
     },
     {
-      "id": "kuet", "name": "KUET", "uni": "KUET", "enabled": true,
-      "methods": ["oai", "xmlui"],
+      "id": "kuet",
+      "name": "KUET",
+      "uni": "KUET",
+      "enabled": true,
+      "methods": [
+        "oai",
+        "xmlui"
+      ],
       "oai": "http://dspace.kuet.ac.bd/oai/request",
       "xmlui": "http://dspace.kuet.ac.bd/xmlui",
       "xmlui_collections": [],
       "assume_thesis": true
     },
     {
-      "id": "bracu", "name": "BRAC University", "uni": "BRAC University", "enabled": true,
-      "methods": ["dspace7", "oai", "xmlui"],
+      "id": "bracu",
+      "name": "BRAC University",
+      "uni": "BRAC University",
+      "enabled": true,
+      "methods": [
+        "dspace7",
+        "oai",
+        "xmlui"
+      ],
       "dspace7": "https://dspace.bracu.ac.bd/server/api",
       "oai": "https://dspace.bracu.ac.bd/server/oai/request",
       "xmlui": "https://dspace.bracu.ac.bd/xmlui",
-      "xmlui_collections": ["10361/105"],
+      "xmlui_collections": [
+        "10361/105"
+      ],
       "assume_thesis": false
     },
     {
-      "id": "diu", "name": "Daffodil International University", "uni": "Daffodil International University", "enabled": true,
-      "methods": ["oai", "xmlui"],
+      "id": "diu",
+      "name": "Daffodil International University",
+      "uni": "Daffodil International University",
+      "enabled": true,
+      "methods": [
+        "oai",
+        "xmlui"
+      ],
       "oai": "http://dspace.daffodilvarsity.edu.bd:8080/oai/request",
       "xmlui": "http://dspace.daffodilvarsity.edu.bd:8080",
       "xmlui_collections": [],
