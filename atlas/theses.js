@@ -495,7 +495,7 @@ window.THESES = [
   "author": "Faruque, F.",
   "year": 2018,
   "degree": "MA",
-  "field": "Architecture",
+  "field": "Architecture & planning",
   "institution": "BUET",
   "url": "http://lib.buet.ac.bd:8080/xmlui/handle/123456789/4972",
   "topics": [
@@ -515,7 +515,7 @@ window.THESES = [
   "author": "Rashid, Md. Bazlur",
   "year": 2023,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/2843",
   "topics": [
@@ -535,7 +535,7 @@ window.THESES = [
   "author": "Sayem, Sheikh Mohammad",
   "year": 2023,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/2649",
   "topics": [
@@ -552,7 +552,7 @@ window.THESES = [
   "author": "Gulshan, Jahida",
   "year": 2021,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/1800",
   "topics": [
@@ -569,7 +569,7 @@ window.THESES = [
   "author": "Chowdhury, Rafiqul Islam",
   "year": 2018,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/348",
   "topics": [
@@ -588,7 +588,7 @@ window.THESES = [
   "author": "Uddin, Md. Azim",
   "year": 2025,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/3860",
   "topics": [
@@ -607,7 +607,7 @@ window.THESES = [
   "author": "Obaidullah, M.",
   "year": 2025,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/3861",
   "topics": [
@@ -624,7 +624,7 @@ window.THESES = [
   "author": "Rahman, Pk. Md. Motiur",
   "year": 2025,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/3859",
   "topics": [
@@ -641,7 +641,7 @@ window.THESES = [
   "author": "Matin, Khan A.",
   "year": 2025,
   "degree": "PhD",
-  "field": "Statistics",
+  "field": "Maths, stats & physics",
   "institution": "ISRT, University of Dhaka",
   "url": "http://repository.library.du.ac.bd:8080/xmlui/handle/123456789/3862",
   "topics": [
