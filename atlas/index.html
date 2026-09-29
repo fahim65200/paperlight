@@ -143,8 +143,9 @@ function counts(list, fn){ const m = new Map(); list.forEach(t => { const v = fn
 
 function draw(){
   const ws = terms(S.q);
-  const base = [];
+    let base = [];
   for (const t of T){ const s = score(t, ws); if (s > 0) base.push({ t, s }); }
+  if (ws.length > 1){ const all = base.filter(x => x.s >= 10); if (all.length) base = all; }
   const pass = (t, skip) => (skip === "field" || !S.field.size || S.field.has(t.field)) && (skip === "uni" || !S.uni.size || S.uni.has(t.uni)) && (skip === "deg" || !S.deg.size || S.deg.has(t.degree)) && (skip === "year" || !S.year.size || S.year.has(decade(t.year))) && (!S.cited || t.citedIn) && (!S.full || t.fullText) && (!S.checked || !t.auto);
   facet($("#fField"), "field", counts(base.filter(x => pass(x.t, "field")).map(x => x.t), t => t.field), S.field);
   facet($("#fUni"), "uni", counts(base.filter(x => pass(x.t, "uni")).map(x => x.t), t => t.uni), S.uni);
