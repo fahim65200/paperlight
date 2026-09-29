@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PDF tools: compress, PDF to Word, Word to PDF | Paperlight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=Tinos:ital,wght@0,400;0,700;1,400&family=Noto+Serif+Bengali:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F5F8; --surface:#FFFFFF; --ink:#16213A; --muted:#5B6680; --line:#D6DCE6;
+  --accent:#1F6F5C; --accent-ink:#FFFFFF; --accent-soft:#E2F0EC; --warn:#9A4B12; --warn-soft:#FBEEE3;
+  --bar-before:#B8C1D1;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10151F; --surface:#182030; --ink:#E8ECF3; --muted:#9AA5BA; --line:#2A3447;
+    --accent:#4FB79B; --accent-ink:#0C1A16; --accent-soft:#1B3330; --warn:#F0A56A; --warn-soft:#352518;
+    --bar-before:#3A465E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10151F; --surface:#182030; --ink:#E8ECF3; --muted:#9AA5BA; --line:#2A3447;
+  --accent:#4FB79B; --accent-ink:#0C1A16; --accent-soft:#1B3330; --warn:#F0A56A; --warn-soft:#352518;
+  --bar-before:#3A465E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:720px;margin:0 auto;padding:clamp(20px,5vw,48px) 20px 32px}
+h1{font:700 clamp(44px,9vw,72px)/0.95 "Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.03em;margin:0 0 12px}
+.lede{color:var(--muted);margin:0 0 32px;max-width:52ch}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;appearance:none;border:0;background:transparent;color:var(--muted);font:500 15px/1.2 inherit;font-family:inherit;padding:12px 8px;border-radius:10px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.tabs button:focus-visible,.btn:focus-visible,.chip input:focus-visible+span,.drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,28px)}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop strong{display:block;font:600 20px/1.3 "Bricolage Grotesque",system-ui,sans-serif;margin-bottom:4px}
+.drop span{color:var(--muted);font-size:14px}
+.file{display:none;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.file.show{display:flex}
+.file .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.xbtn{appearance:none;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+.xbtn:hover{color:var(--ink);background:var(--paper)}
+.file .size{color:var(--muted);font-size:14px;white-space:nowrap}
+.linkbtn{appearance:none;border:0;background:none;color:var(--accent);font:500 14px/1 inherit;font-family:inherit;cursor:pointer;padding:6px}
+fieldset{border:0;margin:22px 0 0;padding:0}
+legend{font-weight:600;margin-bottom:10px;padding:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip span{display:inline-block;padding:9px 16px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:15px}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.hint{color:var(--muted);font-size:14px;margin:10px 0 0;min-height:1.5em}
+.btn{appearance:none;border:0;border-radius:12px;padding:15px 22px;font:600 16px/1 inherit;font-family:inherit;cursor:pointer;background:var(--accent);color:var(--accent-ink);width:100%;margin-top:24px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);margin-top:10px}
+.progress{display:none;margin-top:20px}
+.progress.show{display:block}
+.track{height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.track i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.progress p{margin:8px 0 0;color:var(--muted);font-size:14px}
+.result{display:none;margin-top:24px}
+.result.show{display:block}
+.result h2{font:700 24px/1.2 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 16px}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:10px 14px;align-items:center;margin-bottom:8px}
+.bars .lbl{color:var(--muted);font-size:14px}
+.bars .bar{height:22px;border-radius:6px}
+.bars .val{font-variant-numeric:tabular-nums;font-weight:500;text-align:right}
+.b-before{background:var(--bar-before)}
+.b-after{background:var(--accent)}
+.saving{font:700 clamp(28px,6vw,40px)/1.1 "Bricolage Grotesque",system-ui,sans-serif;color:var(--accent);margin:14px 0 4px}
+.msg{border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;background:var(--warn-soft);color:var(--warn)}
+.msg:empty{display:none}
+.msg.ok{background:var(--accent-soft);color:var(--accent)}
+.notes{margin-top:32px;color:var(--muted);font-size:14px}
+.notes h3{font:600 16px/1.3 "IBM Plex Sans",system-ui,sans-serif;color:var(--ink);margin:0 0 8px}
+.notes p{margin:0 0 10px;max-width:68ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.topnav{max-width:720px;margin:0 auto;padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.topnav a{color:var(--muted);text-decoration:none;font-weight:500}
+.topnav a:hover{color:var(--ink)}
+.topnav .brand{font:700 18px/1 "Bricolage Grotesque",system-ui,sans-serif;color:var(--ink);letter-spacing:-0.02em}
+.sitefoot{max-width:720px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:14px}
+.sitefoot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>PDF tools</h1>
+  <p class="lede">Make PDFs smaller, turn PDFs into Word files, and turn Word files into PDFs. Everything runs in your browser, so your files are never uploaded anywhere.</p>
+
+  <div class="tabs" role="tablist" aria-label="Choose a tool">
+    <button role="tab" id="tab-compress" data-tool="compress" aria-selected="true">Compress PDF</button>
+    <button role="tab" id="tab-pdf2word" data-tool="pdf2word" aria-selected="false">PDF to Word</button>
+    <button role="tab" id="tab-word2pdf" data-tool="word2pdf" aria-selected="false">Word to PDF</button>
+  </div>
+
+  <section class="panel" role="tabpanel" aria-labelledby="tab-compress" id="panel">
+    <label class="drop" id="drop">
+      <input type="file" id="picker" accept=".pdf,application/pdf">
+      <strong id="dropTitle">Choose a PDF</strong>
+      <span>or drag it here</span>
+    </label>
+    <div class="file" id="fileRow">
+      <div class="name" id="fileName"></div>
+      <div class="size" id="fileSize"></div>
+      <button class="linkbtn" id="changeBtn" type="button">Change</button><button class="xbtn" id="removeBtn" type="button" aria-label="Remove file" title="Remove file">×</button>
+    </div>
+
+    <fieldset id="opts"><legend id="optsLegend"></legend><div class="chips" id="chips"></div><p class="hint" id="hint"></p></fieldset>
+
+    <button class="btn" id="goBtn" disabled type="button">Compress PDF</button>
+
+    <div class="progress" id="progress" aria-live="polite">
+      <div class="track"><i id="bar"></i></div>
+      <p id="status"></p>
+    </div>
+
+    <div class="result" id="result" aria-live="polite">
+      <h2 id="resultTitle"></h2>
+      <div id="resultBody"></div>
+      <div class="msg" id="resultMsg"></div>
+      <button class="btn" id="dlBtn" type="button">Download</button>
+      <button class="btn secondary" id="againBtn" type="button">Start with another file</button>
+    </div>
+    <div class="msg" id="errMsg"></div>
+  </section>
+
+  <section class="notes">
+    <h3>What to expect</h3>
+    <p><b>Compress PDF.</b> Light mode tidies the file's structure and keeps text selectable, but often saves little. Balanced and Smallest redraw each page as an image, which shrinks scanned and photo-heavy PDFs a lot, but the text can no longer be selected or searched.</p>
+    <p><b>PDF to Word.</b> Editable mode keeps fonts, sizes, colours and alignment where it can. Pictures, shapes, table borders and coloured backgrounds are not carried over, and complex layouts like columns are simplified. Exact look keeps everything but as pictures. Scanned pages have no text to extract, so they are added as pictures. PDFs made with older Bangla fonts (such as SutonnyMJ) may come out as garbled characters.</p>
+    <p><b>Word to PDF.</b> Works with .docx files (not the older .doc format). Headings, lists, tables and images are kept; custom fonts, headers, footers and page numbers are not. Pages are saved as images, so text in the PDF is not selectable.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const JsPDF = window.jspdf && window.jspdf.jsPDF;
+try { pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; } catch(e){}
+
+// Downloads: use the host's save capability when embedded, else a normal download link.
+const downloadsP = (window.claude && typeof window.claude.use === "function")
+  ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+
+async function saveFile(blob, filename){
+  const d = await downloadsP;
+  if (d) {
+    try { await d.save({ filename, data: blob }); return "saved"; }
+    catch(e){
+      if (e && e.code === "declined") return "declined";
+      if (e && e.code === "rate_limited") return "busy";
+      if (e && !["unavailable","not_granted","capability_disabled","capability_removed"].includes(e.code)) throw e;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return "saved";
+}
+
+const TOOLS = {
+  compress: {
+    accept: ".pdf,application/pdf", title: "Choose a PDF", action: "Compress PDF", legend: "How much to compress",
+    def: "balanced",
+    options: [
+      { id: "light", label: "Light", hint: "Keeps text selectable. Savings are usually small." },
+      { id: "balanced", label: "Balanced", hint: "Pages become 150 dpi images. Good for scans and image-heavy files. Text stops being selectable." },
+      { id: "strong", label: "Smallest", hint: "Pages become 100 dpi images. Smallest file, but small text may look soft." }
+    ]
+  },
+  pdf2word: {
+    accept: ".pdf,application/pdf", title: "Choose a PDF", action: "Convert to Word", legend: "What matters more",
+    def: "text",
+    options: [
+      { id: "text", label: "Editable", hint: "Keeps fonts, sizes, colours and alignment where possible, as text you can edit. Pictures, shapes and table borders are not carried over." },
+      { id: "image", label: "Exact look", hint: "Each page goes into Word as a picture, so it looks identical, including images and colours. The text is not editable." }
+    ]
+  },
+  word2pdf: {
+    accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", title: "Choose a Word file (.docx)", action: "Convert to PDF", legend: "Page size",
+    def: "a4",
+    options: [
+      { id: "a4", label: "A4", hint: "210 × 297 mm, standard in Bangladesh and most countries." },
+      { id: "letter", label: "US Letter", hint: "8.5 × 11 inches, standard in the US and Canada." }
+    ]
+  }
+};
+
+const state = { tool: "compress", file: null, out: null, outName: "", busy: false };
+
+function fmt(bytes){
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + " KB";
+  return (bytes/1048576).toFixed(2) + " MB";
+}
+function baseName(n){ return n.replace(/\.[^.]+$/, ""); }
+function setProgress(text, frac){
+  $("#progress").classList.add("show");
+  $("#status").textContent = text;
+  if (frac != null) $("#bar").style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + "%";
+}
+function clearResult(){
+  $("#result").classList.remove("show"); $("#progress").classList.remove("show");
+  $("#errMsg").textContent = ""; $("#resultMsg").textContent = ""; $("#resultMsg").className = "msg";
+  $("#bar").style.width = "0"; state.out = null;
+}
+function showError(t){ $("#errMsg").textContent = t; $("#progress").classList.remove("show"); }
+
+function renderTool(){
+  const t = TOOLS[state.tool];
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tool === state.tool)));
+  $("#panel").setAttribute("aria-labelledby", "tab-" + state.tool);
+  $("#picker").accept = t.accept;
+  $("#dropTitle").textContent = t.title;
+  $("#goBtn").textContent = t.action;
+  $("#optsLegend").textContent = t.legend;
+  const chips = $("#chips"); chips.innerHTML = "";
+  t.options.forEach(o => {
+    const l = document.createElement("label"); l.className = "chip";
+    const i = document.createElement("input"); i.type = "radio"; i.name = "opt"; i.value = o.id; i.checked = o.id === t.def;
+    i.addEventListener("change", updateHint);
+    const s = document.createElement("span"); s.textContent = o.label;
+    l.append(i, s); chips.append(l);
+  });
+  updateHint();
+  setFile(null); clearResult();
+}
+function currentOpt(){ const c = document.querySelector('input[name="opt"]:checked'); return c ? c.value : TOOLS[state.tool].def; }
+function updateHint(){ const o = TOOLS[state.tool].options.find(x => x.id === currentOpt()); $("#hint").textContent = o ? o.hint : ""; }
+
+function setFile(f){
+  state.file = f;
+  $("#drop").style.display = f ? "none" : "";
+  $("#fileRow").classList.toggle("show", !!f);
+  if (f){ $("#fileName").textContent = f.name; $("#fileSize").textContent = fmt(f.size); }
+  $("#goBtn").disabled = !f;
+  $("#picker").value = "";
+}
+function acceptFile(f){
+  if (!f) return;
+  clearResult();
+  const name = f.name.toLowerCase();
+  if (state.tool === "word2pdf"){
+    if (name.endsWith(".doc")) return showError("This is an older .doc file. Open it in Word and use File > Save As > Word Document (.docx), then try again.");
+    if (!name.endsWith(".docx")) return showError("Please choose a .docx Word file.");
+  } else if (!name.endsWith(".pdf") && f.type !== "application/pdf") {
+    return showError("Please choose a PDF file.");
+  }
+  setFile(f);
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  if (state.busy) return; state.tool = b.dataset.tool; renderTool();
+}));
+$("#picker").addEventListener("change", e => acceptFile(e.target.files[0]));
+$("#changeBtn").addEventListener("click", () => { if (!state.busy) $("#picker").click(); });
+const drop = $("#drop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => acceptFile(e.dataTransfer.files[0]));
+$("#removeBtn").addEventListener("click", () => { if (!state.busy){ setFile(null); clearResult(); } });
+$("#againBtn").addEventListener("click", () => { setFile(null); clearResult(); });
+$("#dlBtn").addEventListener("click", async () => {
+  if (!state.out) return;
+  try {
+    const r = await saveFile(state.out, state.outName);
+    const m = $("#resultMsg");
+    if (r === "declined"){ m.className = "msg"; m.textContent = "Download cancelled. Press Download to try again."; }
+    else if (r === "busy"){ m.className = "msg"; m.textContent = "A save prompt is already open. Finish it, then try again."; }
+  } catch(e){ showError("Could not save the file: " + (e.message || e)); }
+});
+
+$("#goBtn").addEventListener("click", async () => {
+  if (!state.file || state.busy) return;
+  state.busy = true; $("#goBtn").disabled = true; clearResult();
+  try {
+    const buf = await state.file.arrayBuffer();
+    if (state.tool === "compress") await doCompress(buf, currentOpt());
+    else if (state.tool === "pdf2word") await doPdfToWord(buf, currentOpt());
+    else await doWordToPdf(buf, currentOpt());
+  } catch(e){
+    console.error(e);
+    let t = e && e.message ? e.message : String(e);
+    if (e && e.name === "PasswordException") t = "This PDF is password protected. Remove the password first, then try again.";
+    else if (e && e.name === "InvalidPDFException") t = "This file doesn't look like a valid PDF. It may be damaged.";
+    showError(t);
+  } finally {
+    state.busy = false; $("#goBtn").disabled = !state.file;
+  }
+});
+
+// ---------- helpers ----------
+async function openPdf(buf){ return pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise; }
+async function renderPage(page, dpi){
+  const vp1 = page.getViewport({ scale: 1 });
+  let scale = dpi / 72;
+  const maxDim = 5000;
+  scale = Math.min(scale, maxDim / Math.max(vp1.width, vp1.height));
+  const vp = page.getViewport({ scale });
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return { canvas: c, wPt: vp1.width, hPt: vp1.height };
+}
+function canvasBlob(c, q){ return new Promise(r => c.toBlob(b => r(b), "image/jpeg", q)); }
+function finish(blob, name, title, bodyNode){
+  state.out = blob; state.outName = name;
+  $("#progress").classList.remove("show");
+  $("#resultTitle").textContent = title;
+  const body = $("#resultBody"); body.innerHTML = ""; if (bodyNode) body.append(bodyNode);
+  $("#result").classList.add("show");
+}
+function sizeLine(text){ const p = document.createElement("p"); p.style.margin = "0"; p.style.color = "var(--muted)"; p.textContent = text; return p; }
+
+// ---------- compress ----------
+async function doCompress(buf, level){
+  const before = buf.byteLength;
+  let blob;
+  if (level === "light"){
+    setProgress("Tidying the file structure…", 0.3);
+    const d = await PDFLib.PDFDocument.load(buf.slice(0), { ignoreEncryption: true, updateMetadata: false });
+    const bytes = await d.save({ useObjectStreams: true });
+    blob = new Blob([bytes], { type: "application/pdf" });
+  } else {
+    const dpi = level === "strong" ? 100 : 150, q = level === "strong" ? 0.55 : 0.7;
+    const pdf = await openPdf(buf);
+    let doc = null;
+    for (let i = 1; i <= pdf.numPages; i++){
+      setProgress(`Compressing page ${i} of ${pdf.numPages}…`, (i - 1) / pdf.numPages);
+      const page = await pdf.getPage(i);
+      const { canvas, wPt, hPt } = await renderPage(page, dpi);
+      const orient = wPt > hPt ? "l" : "p";
+      if (!doc) doc = new JsPDF({ unit: "pt", format: [wPt, hPt], orientation: orient, compress: true });
+      else doc.addPage([wPt, hPt], orient);
+      doc.addImage(canvas.toDataURL("image/jpeg", q), "JPEG", 0, 0, wPt, hPt, undefined, "FAST");
+      canvas.width = canvas.height = 0; page.cleanup();
+    }
+    blob = doc.output("blob");
+  }
+  const after = blob.size;
+  if (after >= before){
+    $("#progress").classList.remove("show");
+    const msg = level === "light"
+      ? "This PDF is already compact, so Light mode couldn't make it smaller. Try Balanced."
+      : "This PDF is already smaller than the compressed version would be (it is probably mostly text). Your original file is the better choice.";
+    showError(msg); return;
+  }
+  const wrap = document.createElement("div");
+  const pct = Math.round((1 - after / before) * 100);
+  const bars = document.createElement("div"); bars.className = "bars";
+  const add = (lbl, cls, frac, val) => {
+    const a = document.createElement("div"); a.className = "lbl"; a.textContent = lbl;
+    const b = document.createElement("div"); const bi = document.createElement("div"); bi.className = "bar " + cls; bi.style.width = Math.max(2, frac * 100) + "%"; b.append(bi);
+    const c = document.createElement("div"); c.className = "val"; c.textContent = val;
+    bars.append(a, b, c);
+  };
+  add("Before", "b-before", 1, fmt(before));
+  add("After", "b-after", after / before, fmt(after));
+  const s = document.createElement("div"); s.className = "saving"; s.textContent = pct + "% smaller";
+  wrap.append(s, bars);
+  finish(blob, baseName(state.file.name) + "-compressed.pdf", "Your PDF is ready", wrap);
+}
+
+// ---------- PDF to Word ----------
+const FONT_MAP = { helvetica: "Arial", arial: "Arial", arialmt: "Arial", times: "Times New Roman", timesroman: "Times New Roman", timesnewroman: "Times New Roman", timesnewromanps: "Times New Roman", courier: "Courier New", couriernew: "Courier New", symbol: "Symbol", calibri: "Calibri", cambria: "Cambria", georgia: "Georgia", verdana: "Verdana", tahoma: "Tahoma", segoeui: "Segoe UI", garamond: "Garamond", bookantiqua: "Book Antiqua", centurygothic: "Century Gothic", trebuchetms: "Trebuchet MS", palatinolinotype: "Palatino Linotype", aptos: "Aptos", carlito: "Calibri", caladea: "Cambria", liberationsans: "Arial", liberationserif: "Times New Roman", liberationmono: "Courier New", arimo: "Arial", tinos: "Times New Roman", cousine: "Courier New", nimbussans: "Arial", nimbusroman: "Times New Roman" };
+function cleanFont(o){
+  const raw = (o && o.name ? o.name : "").replace(/^[A-Z]{6}\+/, "");
+  const [base, ...rest] = raw.split(/[-,]/);
+  const style = rest.join(" ");
+  let fam = base.replace(/(PSMT|PS|MT|Std|Pro)$/,"");
+  const key = fam.toLowerCase().replace(/[^a-z]/g, "");
+  fam = FONT_MAP[key] || fam.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+  if (!fam || /^(g_|f\d|t\d|tt\d)/i.test(fam)) fam = (o && o.fallbackName === "serif") ? "Times New Roman" : (o && o.fallbackName === "monospace") ? "Courier New" : "Arial";
+  const bold = !!(o && (o.bold || o.black)) || /bold|black|heavy|semibold|demi/i.test(style + " " + base);
+  const italic = !!(o && o.italic) || /italic|oblique/i.test(style + " " + base);
+  return { family: fam, bold, italic };
+}
+// Read the text colour from the rendered page: the pixels that differ most from the local background.
+function sampleColor(ctx, cw, ch, x0, y0, x1, y1){
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(cw, Math.ceil(x1)); y1 = Math.min(ch, Math.ceil(y1));
+  const w = x1 - x0, h = y1 - y0; if (w < 2 || h < 2) return "000000";
+  const d = ctx.getImageData(x0, y0, w, h).data;
+  const step = Math.max(1, Math.floor(Math.sqrt(w * h / 900)));
+  const px = [], hist = new Map();
+  for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step){
+    const i = (y * w + x) * 4, c = [d[i], d[i+1], d[i+2]]; px.push(c);
+    const k = (c[0] >> 4) << 8 | (c[1] >> 4) << 4 | (c[2] >> 4); hist.set(k, (hist.get(k) || 0) + 1);
+  }
+  let bk = 0, bn = -1; hist.forEach((n, k) => { if (n > bn){ bn = n; bk = k; } });
+  const bg = [((bk >> 8) & 15) * 16 + 8, ((bk >> 4) & 15) * 16 + 8, (bk & 15) * 16 + 8];
+  const dist = c => Math.abs(c[0]-bg[0]) + Math.abs(c[1]-bg[1]) + Math.abs(c[2]-bg[2]);
+  let max = 0; px.forEach(c => max = Math.max(max, dist(c)));
+  if (max < 60) return "000000";
+  const core = px.filter(c => dist(c) >= max * 0.8);
+  const avg = [0,1,2].map(j => Math.round(core.reduce((a, c) => a + c[j], 0) / core.length));
+  if (avg[0] < 70 && avg[1] < 70 && avg[2] < 70 && Math.max(...avg) - Math.min(...avg) < 25) return "000000";
+  return avg.map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+function buildLines(items){
+  const its = items.filter(i => i.s.length).sort((a, b) => (b.y - a.y) || (a.x - b.x));
+  const lines = [];
+  for (const it of its){
+    const L = lines[lines.length - 1];
+    if (L && Math.abs(L.y - it.y) < Math.max(L.fs, it.fs) * 0.5){ L.items.push(it); L.fs = Math.max(L.fs, it.fs); }
+    else lines.push({ y: it.y, fs: it.fs, items: [it] });
+  }
+  for (const L of lines){
+    L.items.sort((a, b) => a.x - b.x);
+    const runs = [];
+    L.items.forEach((it, k) => {
+      let pre = "";
+      if (k){
+        const p = L.items[k - 1], gap = it.x - (p.x + p.w);
+        if (gap > p.fs * 2) pre = "\t";
+        else if (gap > p.fs * 0.15 && !/\s$/.test(p.s) && !/^\s/.test(it.s)) pre = " ".repeat(Math.max(1, Math.min(10, Math.round(gap / (p.fs * 0.26)))));
+      }
+      const key = [it.font.family, it.font.bold, it.font.italic, it.color, Math.round(it.fs * 2)].join("|");
+      const last = runs[runs.length - 1];
+      if (last && last.key === key) last.text += pre + it.s;
+      else { if (pre && last) last.text += pre; runs.push({ key, text: it.s, font: it.font, color: it.color, size: Math.round(Math.max(4, Math.min(96, it.fs)) * 2) }); }
+    });
+    if (runs.length) runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, "");
+    L.runs = runs.filter(r => r.text.length);
+    L.text = L.runs.map(r => r.text).join("");
+    L.x0 = Math.min(...L.items.map(i => i.x)); L.x1 = Math.max(...L.items.map(i => i.x + i.w));
+  }
+  return lines.filter(L => L.text.trim());
+}
+function linesToParas(lines, left, right){
+  const paras = []; let cur = null, prev = null;
+  const width = Math.max(1, right - left);
+  for (const L of lines){
+    const gap = prev ? prev.y - L.y : 0;
+    const prevShort = prev && prev.x1 < right - width * 0.15;
+    const brk = !cur || gap > prev.fs * 1.7 || Math.abs(L.fs - cur.fs) > 1.5 || prevShort || L.x0 > prev.x0 + prev.fs * 3;
+    if (brk){ cur = { lines: [L], fs: L.fs, gapBefore: prev ? gap : 0 }; paras.push(cur); }
+    else cur.lines.push(L);
+    prev = L;
+  }
+  paras.forEach(P => {
+    const Ls = P.lines, first = Ls[0];
+    // runs, joining wrapped lines with a space (or removing a line-end hyphen)
+    const runs = [];
+    Ls.forEach((L, i) => {
+      L.runs.forEach((r, j) => {
+        const t = { ...r };
+        if (i && j === 0){
+          const last = runs[runs.length - 1];
+          if (last && /[A-Za-z]-$/.test(last.text)) last.text = last.text.slice(0, -1); else t.text = " " + t.text.replace(/^\s+/, "");
+        }
+        const last = runs[runs.length - 1];
+        if (last && last.key === t.key) last.text += t.text; else runs.push(t);
+      });
+    });
+    P.runs = runs;
+    const x0 = Math.min(...Ls.map(l => l.x0)), x1 = Math.max(...Ls.map(l => l.x1));
+    const lg = x0 - left, rg = right - x1;
+    const gaps = Ls.slice(1).map((l, i) => Ls[i].y - l.y).sort((a, b) => a - b);
+    P.lineGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : P.fs * 1.2;
+    if (Ls.length === 1){
+      if (lg > 24 && Math.abs(lg - rg) < Math.max(12, width * 0.03)) P.align = "center";
+      else if (rg < 6 && lg > 60) P.align = "right";
+      else { P.align = "left"; P.indent = lg; }
+    } else {
+      const centered = Ls.every(l => { const a = l.x0 - left, b = right - l.x1; return a > 12 && Math.abs(a - b) < 14; });
+      if (centered) P.align = "center";
+      else {
+        const full = Ls.slice(0, -1).every(l => l.x1 >= right - 10);
+        P.align = full ? "justify" : "left";
+        const rest = Math.min(...Ls.slice(1).map(l => l.x0));
+        P.indent = rest - left; P.firstLine = first.x0 - rest;
+      }
+    }
+  });
+  return paras;
+}
+async function readTextPage(page){
+  await page.getOperatorList(); // loads fonts so their real names are available
+  const tc = await page.getTextContent();
+  const vp1 = page.getViewport({ scale: 1 }), S = 2;
+  const { canvas } = await renderPage(page, 72 * S);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const k = canvas.width / vp1.width;
+  const fontCache = {};
+  const items = [];
+  for (const i of tc.items){
+    if (typeof i.str !== "string" || !i.str.length) continue;
+    const fs = Math.hypot(i.transform[2], i.transform[3]) || i.height || 10;
+    if (!(i.fontName in fontCache)){ let o = null; try { o = page.commonObjs.get(i.fontName); } catch(e){} fontCache[i.fontName] = cleanFont(o); }
+    const x = i.transform[4], y = i.transform[5], w = i.width || 0;
+    const [cx0, cy0] = vp1.convertToViewportPoint(x, y + fs * 0.8), [cx1, cy1] = vp1.convertToViewportPoint(x + w, y - fs * 0.15);
+    const color = i.str.trim() ? sampleColor(ctx, canvas.width, canvas.height, Math.min(cx0, cx1) * k, Math.min(cy0, cy1) * k, Math.max(cx0, cx1) * k, Math.max(cy0, cy1) * k) : "000000";
+    items.push({ s: i.str, x, y, fs, w, font: fontCache[i.fontName], color });
+  }
+  canvas.width = canvas.height = 0;
+  return { items, w: vp1.width, h: vp1.height };
+}
+async function doPdfToWord(buf, mode){
+  const D = window.docx;
+  if (!D) throw new Error("The Word library didn't load. Check your connection and reload the page.");
+  const pdf = await openPdf(buf);
+  const pages = [];
+  let firstW = 595, firstH = 842, bounds = null;
+  for (let i = 1; i <= pdf.numPages; i++){
+    setProgress(`Reading page ${i} of ${pdf.numPages}…`, (i - 1) / pdf.numPages * 0.9);
+    const page = await pdf.getPage(i);
+    const vp = page.getViewport({ scale: 1 });
+    if (i === 1){ firstW = vp.width; firstH = vp.height; }
+    let done = false;
+    if (mode === "text"){
+      const { items } = await readTextPage(page);
+      const lines = buildLines(items);
+      const chars = lines.reduce((n, L) => n + L.text.trim().length, 0);
+      if (chars >= 20){
+        const left = Math.min(...lines.map(l => l.x0)), right = Math.max(...lines.map(l => l.x1));
+        const top = lines[0].y + lines[0].fs;
+        if (!bounds) bounds = { left, right, top, w: vp.width, h: vp.height };
+        pages.push({ kind: "text", paras: linesToParas(lines, left, right), left });
+        done = true;
+      }
+    }
+    if (!done){
+      const { canvas, wPt, hPt } = await renderPage(page, 150);
+      const b = await canvasBlob(canvas, 0.85);
+      pages.push({ kind: "image", data: new Uint8Array(await b.arrayBuffer()), wPt, hPt });
+      canvas.width = canvas.height = 0;
+    }
+    page.cleanup();
+  }
+  setProgress("Building the Word file…", 0.95);
+  const clampM = v => Math.max(18, Math.min(144, v));
+  const mL = bounds ? clampM(bounds.left) : (mode === "image" ? 18 : 54);
+  const mR = bounds ? clampM(bounds.w - bounds.right) : mL;
+  const mT = bounds ? clampM(bounds.h - bounds.top) : mL;
+  const mB = mode === "image" && !bounds ? 18 : 36;
+  const AL = { center: D.AlignmentType.CENTER, right: D.AlignmentType.RIGHT, justify: D.AlignmentType.JUSTIFIED, left: D.AlignmentType.LEFT };
+  const children = [];
+  pages.forEach((p, idx) => {
+    const pb = idx > 0;
+    if (p.kind === "image"){
+      const f = Math.min((p.wPt - mL - mR) / p.wPt, (p.hPt - mT - mB) / p.hPt) * 0.98;
+      const wPx = Math.round(p.wPt * f * 96 / 72), hPx = Math.round(p.hPt * f * 96 / 72);
+      children.push(new D.Paragraph({ pageBreakBefore: pb, children: [new D.ImageRun({ data: p.data, transformation: { width: wPx, height: hPx } })] }));
+      return;
+    }
+    const shift = p.left - (bounds ? bounds.left : p.left);
+    p.paras.forEach((q, k) => {
+      const kids = [];
+      q.runs.forEach(r => r.text.split("\t").forEach((seg, j) => {
+        const st = { size: r.size, bold: r.font.bold, italics: r.font.italic, font: r.font.family, color: r.color };
+        if (j) kids.push(new D.TextRun({ children: [new D.Tab()], ...st }));
+        if (seg) kids.push(new D.TextRun({ text: seg, ...st }));
+      }));
+      const before = k === 0 ? 0 : Math.max(0, q.gapBefore - q.lineGap);
+      const indentLeft = Math.max(0, (q.indent || 0) + shift);
+      children.push(new D.Paragraph({
+        pageBreakBefore: pb && k === 0,
+        alignment: AL[q.align] || D.AlignmentType.LEFT,
+        indent: q.align === "left" || q.align === "justify" ? { left: Math.round(indentLeft * 20), firstLine: q.firstLine > 0 ? Math.round(q.firstLine * 20) : undefined, hanging: q.firstLine < 0 ? Math.round(-q.firstLine * 20) : undefined } : undefined,
+        spacing: { before: Math.round(Math.min(before, 200) * 20), after: 0, line: Math.max(200, Math.round(q.lineGap * 20)), lineRule: D.LineRuleType.AT_LEAST },
+        children: kids
+      }));
+    });
+  });
+  const doc = new D.Document({
+    creator: "",
+    sections: [{ properties: { page: { size: { width: Math.round(firstW * 20), height: Math.round(firstH * 20) }, margin: { top: Math.round(mT * 20), right: Math.round(mR * 20), bottom: Math.round(mB * 20), left: Math.round(mL * 20) } } }, children }]
+  });
+  const blob = await D.Packer.toBlob(doc);
+  const imgPages = pages.filter(p => p.kind === "image").length;
+  const wrap = document.createElement("div");
+  wrap.append(sizeLine(`${pdf.numPages} page${pdf.numPages > 1 ? "s" : ""} converted, ${fmt(blob.size)}.`));
+  finish(blob, baseName(state.file.name) + ".docx", "Your Word file is ready", wrap);
+  const msg = $("#resultMsg");
+  if (mode === "text" && imgPages){
+    msg.textContent = imgPages === pdf.numPages
+      ? "No text was found in this PDF (it is probably scanned), so every page was added as a picture. To get editable text from a scan you need OCR software."
+      : `${imgPages} page${imgPages > 1 ? "s had" : " had"} no text (probably scanned) and ${imgPages > 1 ? "were" : "was"} added as ${imgPages > 1 ? "pictures" : "a picture"}.`;
+  } else if (mode === "text"){
+    msg.className = "msg ok";
+    msg.textContent = "Fonts, sizes, colours and alignment are kept where possible. Pictures, shapes, table borders and coloured backgrounds are not carried over, so check the file. Choose Exact look if appearance matters more than editing.";
+  }
+}
+
+// ---------- Word to PDF ----------
+async function doWordToPdf(buf, size){
+  if (!window.mammoth) throw new Error("The Word reader didn't load. Check your connection and reload the page.");
+  if (!window.html2pdf) throw new Error("The PDF maker didn't load. Check your connection and reload the page.");
+  setProgress("Reading the Word file…", 0.15);
+  const { value: html, messages } = await mammoth.convertToHtml({ arrayBuffer: buf });
+  if (!html.trim()) throw new Error("This Word file seems to be empty, or its content couldn't be read.");
+  setProgress("Laying out pages…", 0.4);
+  try { await Promise.all([document.fonts.load('16px "Tinos"'), document.fonts.load('16px "Noto Serif Bengali"'), document.fonts.ready]); } catch(e){}
+  const pageW = size === "letter" ? 215.9 : 210, margin = 18;
+  const el = document.createElement("div");
+  el.className = "folio-doc";
+  el.style.width = (pageW - margin * 2) + "mm";
+  el.innerHTML = `<style>
+    .folio-doc{font:11pt/1.5 "Tinos","Noto Serif Bengali","Times New Roman",serif;color:#111;background:#fff}
+    .folio-doc h1{font-size:20pt;margin:0 0 10pt} .folio-doc h2{font-size:16pt;margin:14pt 0 8pt} .folio-doc h3{font-size:13pt;margin:12pt 0 6pt}
+    .folio-doc p{margin:0 0 8pt} .folio-doc img{max-width:100%;height:auto}
+    .folio-doc table{border-collapse:collapse;width:100%;margin:0 0 10pt} .folio-doc td,.folio-doc th{border:1px solid #999;padding:4pt 6pt;vertical-align:top}
+    .folio-doc ul,.folio-doc ol{margin:0 0 8pt;padding-left:22pt}
+  </style>` + html;
+  setProgress("Drawing pages…", 0.6);
+  const blob = await html2pdf().set({
+    margin: margin, image: { type: "jpeg", quality: 0.92 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+    jsPDF: { unit: "mm", format: size === "letter" ? "letter" : "a4", orientation: "portrait" },
+    pagebreak: { mode: ["css", "legacy"], avoid: ["tr", "img", "h1", "h2", "h3", "li"] }
+  }).from(el).outputPdf("blob");
+  const wrap = document.createElement("div");
+  wrap.append(sizeLine(`PDF created, ${fmt(blob.size)}.`));
+  finish(blob, baseName(state.file.name) + ".pdf", "Your PDF is ready", wrap);
+  const warn = (messages || []).filter(m => m.type === "warning").length;
+  if (warn) $("#resultMsg").textContent = "Some formatting in the Word file isn't supported and was simplified. Check the PDF before sending it.";
+}
+
+renderTool();
+})();
+</script>
+</body>
+</html>

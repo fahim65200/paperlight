@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reference verifier: check citations are real, correct and not retracted | Paperlight</title>
+<meta name="description" content="Check every reference against scholarly databases. Find references that can't be found, wrong years or authors, and retracted papers. Free.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+.ref{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.ref:first-child{border-top:1px solid var(--line)}
+.badge{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px;white-space:nowrap;height:max-content}
+.s-ok{background:var(--accent-soft);color:var(--accent)}
+.s-diff{background:var(--warn-soft);color:var(--warn)}
+.s-miss,.s-retr{background:var(--bad-soft);color:var(--bad)}
+.s-err,.s-wait{background:var(--paper);color:var(--muted);border:1px solid var(--line)}
+.ref .txt{font-size:14px;word-break:break-word}
+.ref .why{font-size:14px;margin-top:6px}
+.ref .found{font-size:13px;color:var(--muted);margin-top:4px}
+.ref a{color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px}
+.filters button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px/1.3 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Reference verifier</h1>
+  <p class="lede">Check that every reference is real and correct. Finds references that can't be found, wrong details, and retracted papers.</p>
+
+  <div class="tabs" role="tablist" aria-label="Input">
+    <button role="tab" id="t-paste" aria-controls="p-paste" aria-selected="true">Paste references</button>
+    <button role="tab" id="t-file" aria-controls="p-file" aria-selected="false">Word file</button>
+  </div>
+
+  <section class="panel">
+    <div id="p-paste" role="tabpanel" aria-labelledby="t-paste">
+      <label for="refs" class="help" style="display:block">One reference per line.</label>
+      <textarea id="refs" style="min-height:200px" placeholder="Rahman, M., & Khan, S. (2020). Soil salinity in coastal Bangladesh. Journal of ..."></textarea>
+    </div>
+    <div id="p-file" role="tabpanel" aria-labelledby="t-file" hidden>
+      <label class="drop" id="drop">
+        <input type="file" id="pick" accept=".docx">
+        <strong>Choose your manuscript</strong>
+        <span>Word (.docx) with a References section</span>
+      </label>
+      <div class="file" id="fileRow"><div class="name" id="fileName"></div><div class="size" id="fileSize"></div><button class="linkbtn" id="change" type="button">Change</button><button class="xbtn" id="remove" type="button" aria-label="Remove file" title="Remove file">×</button></div>
+    </div>
+    <p class="help" style="margin-top:14px">Only the reference list is sent to Crossref and OpenAlex (free scholarly databases) to look each one up. Your paper's text is not sent.</p>
+    <button class="btn" id="go" type="button" disabled>Verify references</button>
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="msg" id="err"></div>
+
+    <div class="report" id="report" hidden>
+      <h2 id="rTitle"></h2>
+      <div class="stats" id="stats"></div>
+      <div class="filters" id="filters" role="group" aria-label="Filter"></div>
+      <div id="list"></div>
+      <button class="btn secondary" id="csv" type="button">Download report (CSV)</button>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h3>How to read the results</h3>
+    <p><b>Not found</b> doesn't mean fake. Books, reports, theses, websites and some regional journals are often missing from these databases. It means: check this one yourself.</p>
+    <p><b>Details differ</b> shows the record that was found, so you can compare the year, authors or journal. Matching is automatic and can occasionally pick the wrong paper, so always read the details.</p>
+    <p>Retraction data comes from the databases and may lag behind the latest notices. These are free public services, so very long lists may be slower.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+(function(){
+const { $, esc } = PL;
+PL.tabs();
+let file = null, results = [], filter = "all";
+const refresh = () => { $("#go").disabled = $("#p-file").hidden ? !$("#refs").value.trim() : !file; };
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", refresh));
+$("#refs").addEventListener("input", refresh);
+PL.wireDrop($("#drop"), $("#pick"), files => {
+  const f = files[0]; $("#err").textContent = "";
+  if (!/\.docx$/i.test(f.name)){ $("#err").textContent = "Please choose a .docx file, or paste your references."; return; }
+  file = f; $("#drop").style.display = "none"; $("#fileRow").classList.add("show");
+  $("#fileName").textContent = f.name; $("#fileSize").textContent = PL.fmt(f.size); refresh();
+});
+$("#change").addEventListener("click", () => $("#pick").click());
+$("#remove").addEventListener("click", () => { file = null; $("#fileRow").classList.remove("show"); $("#drop").style.display = ""; refresh(); });
+
+// ---------- helpers ----------
+const fold = s => String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+const tokens = s => fold(s).replace(/<[^>]+>/g, " ").split(/[^\p{L}\p{N}]+/u).filter(t => t.length > 2);
+const DOI_RE = /\b10\.\d{4,9}\/[^\s"<>]+/i;
+const YEAR_RE = /\b(1[6-9]|20)\d{2}\b/;
+function refYear(t){ const m = t.match(/\((\d{4})[a-z]?\)/) || t.match(YEAR_RE); return m ? +m[1].slice(0, 4) : null; }
+function cleanDoi(d){ return d.replace(/[.,;)\]]+$/, ""); }
+
+function fetchJson(url, ms = 15000){
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+  return fetch(url, { signal: c.signal }).then(r => { clearTimeout(t); if (r.status === 404) return null; if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+}
+async function retry(fn){ try { return await fn(); } catch(e){ await new Promise(r => setTimeout(r, 1500)); return fn(); } }
+
+function titleScore(title, refText){
+  const tt = tokens(title); if (!tt.length) return 0;
+  const rt = new Set(tokens(refText));
+  return tt.filter(t => rt.has(t)).length / tt.length;
+}
+function describe(item){
+  const au = (item.author || []).slice(0, 3).map(a => a.family || a.name || "").filter(Boolean);
+  const more = (item.author || []).length > 3 ? " et al." : "";
+  const y = item.issued && item.issued["date-parts"] && item.issued["date-parts"][0] ? item.issued["date-parts"][0][0] : "";
+  return { authors: au.join(", ") + more, year: y ? +y : null, title: (item.title || [""])[0], journal: (item["container-title"] || [""])[0], doi: item.DOI, firstFamily: item.author && item.author[0] ? (item.author[0].family || item.author[0].name || "") : "" };
+}
+
+async function checkRef(text){
+  const doiM = text.match(DOI_RE), doi = doiM ? cleanDoi(doiM[0]) : null;
+  let item = null, via = "";
+  if (doi){
+    const r = await retry(() => fetchJson("https://api.crossref.org/works/" + encodeURI(doi)));
+    if (r && r.message){ item = r.message; via = "doi"; }
+  }
+  let doiBroken = !!doi && !item;
+  if (!item){
+    const q = text.replace(DOI_RE, "").replace(/https?:\/\/\S+/g, "").slice(0, 400);
+    const r = await retry(() => fetchJson("https://api.crossref.org/works?rows=3&select=DOI,title,author,issued,container-title,type,updated-by&query.bibliographic=" + encodeURIComponent(q)));
+    const items = (r && r.message && r.message.items) || [];
+    let best = null, bs = 0;
+    items.forEach(it => { const s = titleScore((it.title || [""])[0], text); if (s > bs){ bs = s; best = it; } });
+    if (best && bs >= 0.6){ item = best; via = "search"; item._score = bs; }
+  }
+  if (!item) return { text, status: doiBroken ? "miss" : "miss", why: doiBroken ? "The DOI in this reference doesn't exist, and no matching paper was found." : "No matching record found. Check this reference exists. Books, reports, theses and websites are often not listed." };
+
+  const d = describe(item);
+  // retraction: Crossref relation, then OpenAlex flag
+  let retracted = (item["updated-by"] || []).some(u => /retract/i.test(u.type || ""));
+  if (!retracted && d.doi){
+    try { const oa = await retry(() => fetchJson("https://api.openalex.org/works/doi:" + encodeURI(d.doi))); if (oa && oa.is_retracted) retracted = true; } catch(e){}
+  }
+  const diffs = [];
+  const score = item._score ?? titleScore(d.title, text);
+  const y = refYear(text);
+  if (y && d.year && Math.abs(y - d.year) > 1) diffs.push(`year is ${d.year}, not ${y}`);
+  else if (y && d.year && y !== d.year) diffs.push(`year may be ${d.year} (you wrote ${y}; online and print years can differ by one)`);
+  if (d.firstFamily && !fold(text).includes(fold(d.firstFamily))) diffs.push(`first author is ${d.firstFamily}`);
+  if (via === "doi" && score < 0.6) diffs.push("the DOI points to a different title");
+  else if (score < 0.85) diffs.push("the title differs slightly");
+  if (d.journal && tokens(d.journal).length && titleScore(d.journal, text) < 0.5 && !/book|report|posted/.test(item.type || "")) diffs.push(`published in ${d.journal}`);
+  const found = d;
+  if (retracted) return { text, status: "retr", why: "This paper has been retracted. Remove it or explain why you cite it.", found };
+  if (diffs.length) return { text, status: "diff", why: "Check: " + diffs.join("; ") + ".", found };
+  return { text, status: "ok", why: "", found };
+}
+
+// ---------- reference list from a Word file ----------
+const REF_HEAD = /^(\d+(\.\d+)*\.?\s*)?(references?|reference\s+list|bibliography|works\s+cited|literature\s+cited)\s*:?$/i;
+function refsFromBlocks(blocks){
+  let idx = -1; blocks.forEach((b, i) => { if (b.text.length < 40 && REF_HEAD.test(b.text.trim())) idx = i; });
+  if (idx < 0) return null;
+  const out = [];
+  for (const b of blocks.slice(idx + 1)){
+    if (b.text.length < 40 && /^(appendix|appendices|supplementary|tables?|figures?)/i.test(b.text)) break;
+    if (b.kind === "cell" || b.kind === "note") continue;
+    out.push(b.text);
+  }
+  return out;
+}
+function splitRefs(lines){
+  const refs = [];
+  lines.map(l => l.trim()).filter(Boolean).forEach(t => {
+    const startsNew = /^\[?\d+[\].)]\s/.test(t) || (/^\p{Lu}/u.test(t) && YEAR_RE.test(t.slice(0, 250)));
+    if (!startsNew && refs.length && t.length < 300) refs[refs.length - 1] += " " + t; else refs.push(t);
+  });
+  return refs.map(r => r.replace(/^\[?\d+[\].)]\s*/, "")).filter(r => r.length > 15);
+}
+
+// ---------- run ----------
+const LABEL = { ok: "Verified", diff: "Details differ", miss: "Not found", retr: "Retracted", err: "Couldn't check", wait: "Checking…" };
+function renderList(){
+  const show = results.filter(r => filter === "all" || r.status === filter);
+  $("#list").innerHTML = show.map(r => `<div class="ref"><span class="badge s-${r.status}">${LABEL[r.status]}</span><div>
+    <div class="txt">${esc(r.text)}</div>
+    ${r.why ? `<div class="why">${esc(r.why)}</div>` : ""}
+    ${r.found && r.status !== "ok" ? `<div class="found">Found: ${esc(r.found.authors)}${r.found.year ? " (" + r.found.year + ")" : ""}. ${esc(r.found.title)}${r.found.journal ? ". <i>" + esc(r.found.journal) + "</i>" : ""}</div>` : ""}
+    ${r.found && r.found.doi ? `<div class="found"><a href="https://doi.org/${esc(r.found.doi)}" target="_blank" rel="noopener">doi.org/${esc(r.found.doi)}</a></div>` : ""}
+  </div></div>`).join("") || `<p class="sum">Nothing in this group.</p>`;
+}
+function renderSummary(done){
+  const c = k => results.filter(r => r.status === k).length;
+  const bad = c("miss") + c("retr"), diff = c("diff");
+  $("#rTitle").textContent = !done ? `Checking ${results.length} references…` : bad || diff ? `${bad + diff} reference${bad + diff > 1 ? "s" : ""} to check` : "All references verified";
+  $("#stats").innerHTML = [["ok","Verified","ok"],["diff","Details differ","warn"],["miss","Not found","bad"],["retr","Retracted","bad"]]
+    .map(([k, l, cls]) => `<div class="stat ${c(k) ? cls : ""}"><b>${c(k)}</b><span>${l}</span></div>`).join("");
+  const opts = [["all", "All"], ["retr", "Retracted"], ["miss", "Not found"], ["diff", "Details differ"], ["ok", "Verified"], ["err", "Couldn't check"]].filter(([k]) => k === "all" || c(k));
+  $("#filters").innerHTML = opts.map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${filter === k}">${l}</button>`).join("");
+  $("#filters").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { filter = b.dataset.f; renderSummary(done); renderList(); }));
+}
+
+$("#go").addEventListener("click", async () => {
+  $("#err").textContent = ""; $("#go").disabled = true; filter = "all";
+  try {
+    let lines;
+    if ($("#p-file").hidden) lines = $("#refs").value.split(/\r?\n/);
+    else {
+      $("#status").textContent = "Reading the Word file…";
+      lines = refsFromBlocks(await PL.docxBlocks(await file.arrayBuffer()));
+      if (!lines) throw new Error("Couldn't find a References heading. Paste the reference list instead.");
+    }
+    const refs = splitRefs(lines);
+    if (!refs.length) throw new Error("No references found.");
+    if (refs.length > 300) throw new Error(`That's ${refs.length} references. Please check up to 300 at a time.`);
+    results = refs.map(text => ({ text, status: "wait" }));
+    $("#report").hidden = false; renderSummary(false); renderList();
+    let next = 0, done = 0;
+    const worker = async () => {
+      while (next < results.length){
+        const i = next++;
+        try { results[i] = await checkRef(results[i].text); }
+        catch(e){ results[i] = { text: results[i].text, status: "err", why: "Couldn't reach the database. Check your connection and try again." }; }
+        done++; $("#status").textContent = `Checked ${done} of ${results.length}…`;
+        renderSummary(false); renderList();
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (results.every(r => r.status === "err")) $("#err").textContent = "Couldn't reach the databases. You may be offline, or they may be busy. Try again in a minute.";
+    renderSummary(true); renderList();
+  } catch(e){ console.error(e); $("#err").textContent = e.message || String(e); }
+  finally { $("#status").textContent = ""; refresh(); }
+});
+
+$("#csv").addEventListener("click", () => {
+  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  const rows = [["Status","Your reference","Notes","Found title","Found authors","Found year","Found journal","DOI"]].concat(
+    results.map(r => [LABEL[r.status], r.text, r.why, r.found?.title, r.found?.authors, r.found?.year, r.found?.journal, r.found?.doi]));
+  PL.saveFile(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv" }), "reference-check.csv");
+});
+})();
+</script>
+</body>
+</html>

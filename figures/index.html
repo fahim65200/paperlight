@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Figure preparer: resize figures to journal dpi and TIFF | Paperlight</title>
+<meta name="description" content="Resize figures to journal column widths at 300, 600 or 1000 dpi and save as TIFF, PNG or JPEG with the right resolution set. Batch, free and private.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+.thumbs{display:grid;gap:10px;margin-top:16px}
+.thumb{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.thumb img{width:56px;height:56px;object-fit:contain;background:repeating-conic-gradient(var(--line) 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:6px}
+.thumb .n{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thumb .d{color:var(--muted);font-size:13px}
+.thumb .w{color:var(--warn);font-size:13px}
+.thumb button{appearance:none;border:0;background:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;padding:6px}
+.opt{margin-top:22px}
+.opt > .lbl{display:block;font-weight:600;margin-bottom:10px}
+.custom{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+.custom input{width:110px}
+.out{margin-top:6px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Figure preparer</h1>
+  <p class="lede">Resize your figures to a journal's column width and resolution, and save them as TIFF, PNG or JPEG with the dpi set correctly. Do several at once.</p>
+
+  <section class="panel">
+    <label class="drop" id="drop">
+      <input type="file" id="pick" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/tiff" multiple>
+      <strong>Choose your figures</strong>
+      <span>PNG, JPEG or WebP. Select several, or drag them here</span>
+    </label>
+    <div class="thumbs" id="thumbs"></div>
+    <button class="linkbtn" id="addMore" type="button" hidden>+ Add more figures</button>
+
+    <fieldset class="opt" style="border:0;padding:0;margin-inline:0"><legend class="lbl" style="font-weight:600;margin-bottom:10px;padding:0">Width on the printed page</legend>
+      <div class="chips" id="widthChips">
+        <label class="chip"><input type="radio" name="w" value="90" checked><span>Single column, 90 mm</span></label>
+        <label class="chip"><input type="radio" name="w" value="140"><span>1.5 column, 140 mm</span></label>
+        <label class="chip"><input type="radio" name="w" value="180"><span>Full width, 180 mm</span></label>
+        <label class="chip"><input type="radio" name="w" value="custom"><span>Custom</span></label>
+        <label class="chip"><input type="radio" name="w" value="keep"><span>Keep pixel size</span></label>
+      </div>
+      <div class="custom" id="customBox" hidden><input type="number" id="customMm" min="10" max="500" value="120" aria-label="Custom width in millimetres"> mm wide</div>
+      <p class="help" style="margin-top:10px">These are common widths. Check your journal's figure guidelines for exact sizes.</p>
+    </fieldset>
+
+    <fieldset class="opt" style="border:0;padding:0;margin-inline:0"><legend class="lbl" style="font-weight:600;margin-bottom:10px;padding:0">Resolution</legend>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="dpi" value="300" checked><span>300 dpi, photos</span></label>
+        <label class="chip"><input type="radio" name="dpi" value="600"><span>600 dpi, mixed</span></label>
+        <label class="chip"><input type="radio" name="dpi" value="1000"><span>1000 dpi, line art</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset class="opt" style="border:0;padding:0;margin-inline:0"><legend class="lbl" style="font-weight:600;margin-bottom:10px;padding:0">Format</legend>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="fmt" value="tiff" checked><span>TIFF</span></label>
+        <label class="chip"><input type="radio" name="fmt" value="png"><span>PNG</span></label>
+        <label class="chip"><input type="radio" name="fmt" value="jpeg"><span>JPEG</span></label>
+      </div>
+      <p class="help" style="margin-top:10px" id="fmtHint"></p>
+    </fieldset>
+
+    <p class="out" id="preview"></p>
+    <button class="btn" id="go" type="button" disabled>Prepare figures</button>
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="msg" id="err"></div>
+    <div class="report" id="report" hidden>
+      <h2 id="rTitle"></h2>
+      <div class="tablewrap"><table class="data"><thead><tr><th>Figure</th><th class="num">Pixels</th><th class="num">Size</th><th>Notes</th></tr></thead><tbody id="rBody"></tbody></table></div>
+      <button class="btn" id="dl" type="button">Download</button>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h3>Good to know</h3>
+    <p>Enlarging a small image sets the right dpi on paper, but it can't add detail that wasn't there. If a figure is flagged as enlarged, export it again from the original software (Excel, R, ArcGIS, QGIS) at a higher resolution if you can.</p>
+    <p>Figures are saved in RGB colour. Transparent areas become white in TIFF and JPEG. TIFF files are larger but lossless, which most journals prefer for final submission.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="../assets/common.js"></script>
+<script src="encoders.js"></script>
+<script>
+(function(){
+const { $, esc } = PL;
+const items = []; let result = null;
+const FMT_HINT = { tiff: "Lossless and widely required for final submission. Larger files.", png: "Lossless and smaller than TIFF. Good for charts and diagrams.", jpeg: "Smallest files, slightly lossy. Fine for photos." };
+const opt = n => document.querySelector(`input[name="${n}"]:checked`).value;
+const targetMm = () => { const w = opt("w"); return w === "keep" ? null : w === "custom" ? Math.max(10, +$("#customMm").value || 0) : +w; };
+
+function updatePreview(){
+  $("#fmtHint").textContent = FMT_HINT[opt("fmt")];
+  $("#customBox").hidden = opt("w") !== "custom";
+  const mm = targetMm(), dpi = +opt("dpi");
+  $("#preview").textContent = mm ? `Output width: ${Math.round(mm / 25.4 * dpi).toLocaleString()} pixels (${mm} mm at ${dpi} dpi). Height keeps each figure's proportions.` : `Pixel size stays the same; only the dpi and format change.`;
+  $("#go").disabled = !items.length;
+}
+document.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener("change", updatePreview));
+$("#customMm").addEventListener("input", updatePreview);
+
+async function loadImage(file){
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("unreadable")); img.src = url; });
+  return { img, url };
+}
+function drawThumbs(){
+  const box = $("#thumbs"); box.innerHTML = "";
+  items.forEach((it, i) => {
+    const d = document.createElement("div"); d.className = "thumb";
+    d.innerHTML = `<img alt="" src="${it.url}"><div><div class="n">${esc(it.file.name)}</div><div class="d">${it.img.naturalWidth} × ${it.img.naturalHeight} px, ${PL.fmt(it.file.size)}</div></div><button type="button" aria-label="Remove ${esc(it.file.name)}">×</button>`;
+    d.querySelector("button").addEventListener("click", () => { URL.revokeObjectURL(it.url); items.splice(i, 1); drawThumbs(); });
+    box.append(d);
+  });
+  $("#drop").style.display = items.length ? "none" : "";
+  $("#addMore").hidden = !items.length;
+  $("#report").hidden = true; updatePreview();
+}
+PL.wireDrop($("#drop"), $("#pick"), async files => {
+  $("#err").textContent = ""; const bad = [];
+  for (const f of files){
+    try { const { img, url } = await loadImage(f); items.push({ file: f, img, url }); }
+    catch(e){ bad.push(f.name); }
+  }
+  if (bad.length) $("#err").textContent = `Couldn't open ${bad.join(", ")}. ` + (bad.some(n => /\.tiff?$/i.test(n)) ? "Most browsers can't read TIFF files, so convert them to PNG first." : "The file may be damaged or an unsupported type.");
+  drawThumbs();
+});
+$("#addMore").addEventListener("click", () => $("#pick").click());
+// drag onto the list too
+PL.wireDrop($("#thumbs"), $("#pick"), files => { const dt = new DataTransfer(); files.forEach(f => dt.items.add(f)); $("#pick").files = dt.files; $("#pick").dispatchEvent(new Event("change")); });
+
+// High-quality resize: halve repeatedly when shrinking a lot
+function resize(img, w, h, whiteBg){
+  let src = img, sw = img.naturalWidth, sh = img.naturalHeight;
+  while (sw / 2 >= w && sh / 2 >= h){
+    const c = document.createElement("canvas"); c.width = Math.round(sw / 2); c.height = Math.round(sh / 2);
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, c.width, c.height);
+    src = c; sw = c.width; sh = c.height;
+  }
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d");
+  if (whiteBg){ x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); }
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+  x.drawImage(src, 0, 0, w, h);
+  return c;
+}
+const toBlob = (c, type, q) => new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("too large")), type, q));
+
+$("#go").addEventListener("click", async () => {
+  if (!items.length) return;
+  $("#go").disabled = true; $("#err").textContent = ""; $("#report").hidden = true;
+  const mm = targetMm(), dpi = +opt("dpi"), fmt = opt("fmt");
+  const ext = { tiff: "tif", png: "png", jpeg: "jpg" }[fmt];
+  const outs = [], rows = [];
+  try {
+    for (let i = 0; i < items.length; i++){
+      const { img, file } = items[i];
+      $("#status").textContent = `Preparing ${i + 1} of ${items.length}: ${file.name}…`;
+      await new Promise(r => setTimeout(r, 20));
+      const ow = img.naturalWidth, oh = img.naturalHeight;
+      const w = mm ? Math.round(mm / 25.4 * dpi) : ow, h = Math.max(1, Math.round(oh * w / ow));
+      if (w * h > 120e6) { rows.push({ name: file.name, px: `${w} × ${h}`, size: "", note: "Skipped: too large to process in a browser. Choose a lower dpi or narrower width.", bad: true }); continue; }
+      let c;
+      try { c = resize(img, w, h, fmt !== "png"); } catch(e){ rows.push({ name: file.name, px: "", size: "", note: "Skipped: this browser ran out of memory. Try a lower dpi.", bad: true }); continue; }
+      let bytes;
+      try {
+        if (fmt === "tiff") bytes = PLImg.encodeTiff(c.getContext("2d").getImageData(0, 0, w, h).data, w, h, dpi);
+        else if (fmt === "png") bytes = PLImg.pngSetDpi(new Uint8Array(await (await toBlob(c, "image/png")).arrayBuffer()), dpi);
+        else bytes = PLImg.jpegSetDpi(new Uint8Array(await (await toBlob(c, "image/jpeg", 0.92)).arrayBuffer()), dpi);
+      } catch(e){ rows.push({ name: file.name, px: `${w} × ${h}`, size: "", note: "Skipped: too large for this browser. Try a lower dpi.", bad: true }); continue; }
+      c.width = c.height = 0;
+      const name = PL.baseName(file.name) + "." + ext;
+      outs.push({ name, bytes });
+      const notes = [];
+      if (mm && w > ow * 1.05) notes.push(`Enlarged ${Math.round(w / ow * 100)}%. For sharp print the original should be at least ${w} px wide.`);
+      const printW = (w / dpi * 25.4).toFixed(0), printH = (h / dpi * 25.4).toFixed(0);
+      rows.push({ name, px: `${w.toLocaleString()} × ${h.toLocaleString()}`, size: PL.fmt(bytes.length), note: (notes.join(" ") || "Ready.") + ` Prints at ${printW} × ${printH} mm.`, warn: notes.length > 0 });
+    }
+    if (!outs.length) throw new Error("No figures could be prepared.");
+    // unique names
+    const seen = {}; outs.forEach(o => { if (seen[o.name]){ const b = PL.baseName(o.name), e = o.name.slice(b.length); o.name = `${b}-${++seen[o.name]}${e}`; } else seen[o.name] = 1; });
+    if (outs.length === 1) result = { blob: new Blob([outs[0].bytes], { type: { tiff: "image/tiff", png: "image/png", jpeg: "image/jpeg" }[fmt] }), name: outs[0].name };
+    else {
+      $("#status").textContent = "Packing into a ZIP file…";
+      const zip = new JSZip(); outs.forEach(o => zip.file(o.name, o.bytes));
+      result = { blob: await zip.generateAsync({ type: "blob", compression: fmt === "tiff" ? "DEFLATE" : "STORE" }), name: `figures-${dpi}dpi.zip` };
+    }
+    $("#rBody").innerHTML = rows.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${r.px}</td><td class="num">${r.size}</td><td style="font-size:14px;color:${r.bad ? "var(--bad)" : r.warn ? "var(--warn)" : "var(--muted)"}">${esc(r.note)}</td></tr>`).join("");
+    $("#rTitle").textContent = outs.length === 1 ? "Your figure is ready" : `${outs.length} figures are ready`;
+    $("#dl").textContent = outs.length === 1 ? `Download ${result.name}` : `Download all as ZIP (${PL.fmt(result.blob.size)})`;
+    $("#report").hidden = false;
+  } catch(e){ console.error(e); $("#err").textContent = e.message || String(e); }
+  finally { $("#status").textContent = ""; $("#go").disabled = !items.length; }
+});
+$("#dl").addEventListener("click", async () => { if (result){ const r = await PL.saveFile(result.blob, result.name); if (r === "declined") $("#status").textContent = "Download cancelled."; } });
+updatePreview();
+})();
+</script>
+</body>
+</html>

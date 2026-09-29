@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Credits and open-source licenses | Paperlight</title>
+<style>
+:root{--paper:#F3F5F8;--surface:#FFFFFF;--ink:#16213A;--muted:#5B6680;--line:#D6DCE6;--accent:#1F6F5C;--accent-soft:#E2F0EC;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#10151F;--surface:#182030;--ink:#E8ECF3;--muted:#9AA5BA;--line:#2A3447;--accent:#4FB79B;--accent-soft:#1B3330}}
+:root[data-theme="dark"]{--paper:#10151F;--surface:#182030;--ink:#E8ECF3;--muted:#9AA5BA;--line:#2A3447;--accent:#4FB79B;--accent-soft:#1B3330}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:880px;margin:0 auto;padding:clamp(32px,7vw,80px) 20px 40px}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.sitefoot{max-width:880px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:14px}
+.sitefoot a{color:var(--muted)}
+main{max-width:720px}
+h1{font:700 clamp(36px,7vw,52px)/1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-0.03em;margin:0 0 14px}
+p{color:var(--muted);max-width:62ch}
+table{width:100%;border-collapse:collapse;margin-top:24px;font-size:15px}
+th,td{text-align:left;padding:12px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600}
+td a{color:var(--accent)}
+.back{display:inline-block;margin-bottom:28px;color:var(--muted);text-decoration:none;font-weight:500}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Paperlight</a>
+  <h1>Credits</h1>
+  <p>Paperlight is built on free, open-source software. Thank you to the people who make and maintain these projects. Each is used under its own license, and their copyright notices are kept in the files we load.</p>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Project</th><th>Used for</th><th>License</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://github.com/mozilla/pdf.js">PDF.js</a> (Mozilla)</td><td>Reading and displaying PDFs</td><td>Apache 2.0</td></tr>
+      <tr><td><a href="https://github.com/Hopding/pdf-lib">pdf-lib</a></td><td>Editing PDF structure</td><td>MIT</td></tr>
+      <tr><td><a href="https://github.com/parallax/jsPDF">jsPDF</a></td><td>Creating PDFs</td><td>MIT</td></tr>
+      <tr><td><a href="https://github.com/eKoopmans/html2pdf.js">html2pdf.js</a></td><td>Word to PDF layout</td><td>MIT</td></tr>
+      <tr><td><a href="https://github.com/dolanmiu/docx">docx</a></td><td>Creating Word files</td><td>MIT</td></tr>
+      <tr><td><a href="https://github.com/mwilliamson/mammoth.js">mammoth.js</a></td><td>Reading Word files</td><td>BSD 2-Clause</td></tr>
+      <tr><td><a href="https://github.com/Stuk/jszip">JSZip</a></td><td>Opening Word files for cleaning</td><td>MIT (dual-licensed with GPLv3)</td></tr>
+      <tr><td><a href="https://www.crossref.org">Crossref</a> and <a href="https://openalex.org">OpenAlex</a></td><td>Reference lookups and retraction data</td><td>Free public APIs, used under their terms</td></tr>
+      <tr><td><a href="https://fonts.google.com">Google Fonts</a>: Bricolage Grotesque, IBM Plex Sans, Tinos, Noto Serif Bengali</td><td>Typography</td><td>SIL Open Font License / Apache 2.0</td></tr>
+    </tbody>
+  </table>
+  </div>
+</main>
+</body>
+</html>

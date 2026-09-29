@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manuscript prep: anonymize and check before submission | Paperlight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F5F8; --surface:#FFFFFF; --ink:#16213A; --muted:#5B6680; --line:#D6DCE6;
+  --accent:#1F6F5C; --accent-ink:#FFFFFF; --accent-soft:#E2F0EC; --warn:#9A4B12; --warn-soft:#FBEEE3; --bad:#A3262A; --bad-soft:#FBE6E6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10151F; --surface:#182030; --ink:#E8ECF3; --muted:#9AA5BA; --line:#2A3447;
+    --accent:#4FB79B; --accent-ink:#0C1A16; --accent-soft:#1B3330; --warn:#F0A56A; --warn-soft:#352518; --bad:#F08A8A; --bad-soft:#3A1E22;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10151F; --surface:#182030; --ink:#E8ECF3; --muted:#9AA5BA; --line:#2A3447;
+  --accent:#4FB79B; --accent-ink:#0C1A16; --accent-soft:#1B3330; --warn:#F0A56A; --warn-soft:#352518; --bad:#F08A8A; --bad-soft:#3A1E22;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:720px;margin:0 auto;padding:clamp(20px,5vw,48px) 20px 32px}
+h1{font:700 clamp(38px,8vw,60px)/1 "Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.03em;margin:0 0 12px}
+.lede{color:var(--muted);margin:0 0 32px;max-width:56ch}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;appearance:none;border:0;background:transparent;color:var(--muted);font:500 15px/1.2 "IBM Plex Sans",system-ui,sans-serif;padding:12px 8px;border-radius:10px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,28px)}
+.panel[hidden]{display:none}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop strong{display:block;font:600 20px/1.3 "Bricolage Grotesque",system-ui,sans-serif;margin-bottom:4px}
+.drop span{color:var(--muted);font-size:14px}
+.file{display:none;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.file.show{display:flex}
+.file .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.file .size{color:var(--muted);font-size:14px;white-space:nowrap}
+.xbtn{appearance:none;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+.xbtn:hover{color:var(--ink);background:var(--paper)}
+.linkbtn{appearance:none;border:0;background:none;color:var(--accent);font:500 14px/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;padding:6px}
+.field{margin-top:22px}
+.field > label, .field > .lbl{display:block;font-weight:600;margin-bottom:6px}
+.field .help{color:var(--muted);font-size:14px;margin:0 0 8px}
+textarea,input[type=text],input[type=number],select{width:100%;font:400 15px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:120px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:15px}
+.check input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}
+.suggest{font-size:14px;color:var(--muted);margin-top:8px}
+.suggest button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px;margin:4px 6px 0 0;font:500 13px/1.4 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
+.btn{appearance:none;border:0;border-radius:12px;padding:15px 22px;font:600 16px/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;background:var(--accent);color:var(--accent-ink);width:100%;margin-top:24px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.status{color:var(--muted);font-size:14px;margin-top:14px;min-height:1.2em}
+.report{margin-top:24px}
+.report h2{font:700 24px/1.2 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 6px}
+.report .sum{color:var(--muted);margin:0 0 16px}
+.rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.rows li{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.badge{display:inline-block;text-align:center;font-size:13px;font-weight:600;border-radius:6px;padding:3px 0;height:max-content}
+.b-pass{background:var(--accent-soft);color:var(--accent)}
+.b-warn{background:var(--warn-soft);color:var(--warn)}
+.b-fail{background:var(--bad-soft);color:var(--bad)}
+.b-info{background:var(--paper);color:var(--muted);border:1px solid var(--line)}
+.rows .t{font-weight:500}
+.rows .d{color:var(--muted);font-size:14px;margin-top:2px;word-break:break-word}
+.msg{border-radius:12px;padding:12px 14px;font-size:14px;margin-top:14px;background:var(--bad-soft);color:var(--bad)}
+.msg:empty{display:none}
+.notes{margin-top:32px;color:var(--muted);font-size:14px}
+.notes h3{font:600 16px/1.3 "IBM Plex Sans",system-ui,sans-serif;color:var(--ink);margin:0 0 8px}
+.notes p{margin:0 0 10px;max-width:68ch}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.topnav{max-width:720px;margin:0 auto;padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.topnav a{color:var(--muted);text-decoration:none;font-weight:500}
+.topnav a:hover{color:var(--ink)}
+.topnav .brand{font:700 18px/1 "Bricolage Grotesque",system-ui,sans-serif;color:var(--ink);letter-spacing:-0.02em}
+.sitefoot{max-width:720px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:14px}
+.sitefoot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Manuscript prep</h1>
+  <p class="lede">Remove names and hidden author details before blind review, then check your PDF against the journal's requirements. Your files stay on your device.</p>
+
+  <div class="tabs" role="tablist" aria-label="Choose a tool">
+    <button role="tab" id="tab-anon" aria-controls="p-anon" aria-selected="true">Anonymize</button>
+    <button role="tab" id="tab-check" aria-controls="p-check" aria-selected="false">Check PDF</button>
+  </div>
+
+  <!-- ANONYMIZE -->
+  <section class="panel" role="tabpanel" id="p-anon" aria-labelledby="tab-anon">
+    <label class="drop" id="aDrop">
+      <input type="file" id="aPick" accept=".docx,.pdf">
+      <strong>Choose a manuscript</strong>
+      <span>Word (.docx) or PDF, or drag it here</span>
+    </label>
+    <div class="file" id="aRow"><div class="name" id="aName"></div><div class="size" id="aSize"></div><button class="linkbtn" id="aChange" type="button">Change</button><button class="xbtn" id="aRemove" type="button" aria-label="Remove file" title="Remove file">×</button></div>
+
+    <div class="field">
+      <label for="aTerms">Names and details to hide</label>
+      <p class="help">One per line: author names, affiliations, emails, grant numbers, project names, city names that give you away.</p>
+      <textarea id="aTerms" placeholder="Jane Rahman&#10;University of Dhaka&#10;jane@example.com"></textarea>
+      <div class="suggest" id="aSuggest"></div>
+    </div>
+    <div class="field">
+      <label for="aRepl">Replace them with</label>
+      <input type="text" id="aRepl" value="[Anonymized]">
+    </div>
+
+    <button class="btn" id="aGo" type="button" disabled>Anonymize</button>
+    <div class="status" id="aStatus" aria-live="polite"></div>
+    <div class="msg" id="aErr"></div>
+    <div class="report" id="aReport" hidden>
+      <h2 id="aTitle"></h2>
+      <p class="sum" id="aSum"></p>
+      <ul class="rows" id="aRows"></ul>
+      <button class="btn" id="aDl" type="button">Download cleaned file</button>
+    </div>
+  </section>
+
+  <!-- CHECK -->
+  <section class="panel" role="tabpanel" id="p-check" aria-labelledby="tab-check" hidden>
+    <label class="drop" id="cDrop">
+      <input type="file" id="cPick" accept=".pdf,application/pdf">
+      <strong>Choose your PDF</strong>
+      <span>or drag it here</span>
+    </label>
+    <div class="file" id="cRow"><div class="name" id="cName"></div><div class="size" id="cSize"></div><button class="linkbtn" id="cChange" type="button">Change</button><button class="xbtn" id="cRemove" type="button" aria-label="Remove file" title="Remove file">×</button></div>
+
+    <div class="field">
+      <span class="lbl">Requirements</span>
+      <p class="help">Copy these from the journal's author guidelines. Leave a box empty to skip that check.</p>
+      <div class="grid">
+        <div><label for="cMaxMb">Max file size (MB)</label><input type="number" id="cMaxMb" min="0" step="0.1"></div>
+        <div><label for="cMaxPages">Max pages</label><input type="number" id="cMaxPages" min="0" step="1"></div>
+        <div><label for="cMaxWords">Max words (approximate)</label><input type="number" id="cMaxWords" min="0" step="1"></div>
+        <div><label for="cPage">Page size</label>
+          <select id="cPage"><option value="">Any</option><option value="A4">A4</option><option value="Letter">US Letter</option></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="cFonts" checked><span>All fonts must be embedded</span></label>
+      <label class="check"><input type="checkbox" id="cBlind"><span>This is for blind review (flag author details)</span></label>
+    </div>
+    <div class="field" id="cNamesField" hidden>
+      <label for="cNames">Names that must not appear</label>
+      <textarea id="cNames" placeholder="One per line"></textarea>
+    </div>
+
+    <button class="btn" id="cGo" type="button" disabled>Check PDF</button>
+    <div class="status" id="cStatus" aria-live="polite"></div>
+    <div class="msg" id="cErr"></div>
+    <div class="report" id="cReport" hidden>
+      <h2 id="cTitle"></h2>
+      <p class="sum" id="cSum"></p>
+      <ul class="rows" id="cRows"></ul>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h3>What these tools can and can't do</h3>
+    <p><b>Word files</b> are cleaned fully: the names you list are replaced everywhere in the text (including headers, footers, footnotes and comments), and hidden author details in file properties, tracked changes and comments are removed.</p>
+    <p><b>PDFs</b> get their hidden metadata and comment authors removed, but the visible text can't be safely edited here. The report shows which pages still contain your listed names, so you can fix them in the original Word or LaTeX file and export again.</p>
+    <p>Always open the result and read it once before submitting. Self-citations such as "as we showed in Rahman et al." can reveal you even when your name is hidden, and those need your judgement.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+try { pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; } catch(e){}
+const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+// ---------- downloads ----------
+const downloadsP = (window.claude && typeof window.claude.use === "function")
+  ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+async function saveFile(blob, filename){
+  const d = await downloadsP;
+  if (d){
+    try { await d.save({ filename, data: blob }); return "saved"; }
+    catch(e){
+      if (e && e.code === "declined") return "declined";
+      if (e && e.code === "rate_limited") return "busy";
+      if (e && !["unavailable","not_granted","capability_disabled","capability_removed"].includes(e.code)) throw e;
+    }
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return "saved";
+}
+
+// ---------- shared ui ----------
+const fmt = b => b < 1024 ? b + " B" : b < 1048576 ? (b/1024).toFixed(1) + " KB" : (b/1048576).toFixed(2) + " MB";
+const baseName = n => n.replace(/\.[^.]+$/, "");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+function terms(text){ return [...new Set(text.split(/\n/).map(s => s.trim()).filter(s => s.length >= 2))]; }
+function rows(el, list){
+  el.innerHTML = "";
+  const label = { pass: "Pass", warn: "Check", fail: "Fail", info: "Info" };
+  list.forEach(r => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="badge b-${r.s}">${label[r.s]}</span><div><div class="t">${esc(r.t)}</div>${r.d ? `<div class="d">${esc(r.d)}</div>` : ""}</div>`;
+    el.append(li);
+  });
+}
+function wireFile(prefix, onFile){
+  const drop = $("#" + prefix + "Drop"), pick = $("#" + prefix + "Pick");
+  pick.addEventListener("change", e => onFile(e.target.files[0]));
+  $("#" + prefix + "Change").addEventListener("click", () => pick.click());
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => onFile(e.dataTransfer.files[0]));
+}
+function showFile(prefix, f){
+  $("#" + prefix + "Drop").style.display = f ? "none" : "";
+  $("#" + prefix + "Row").classList.toggle("show", !!f);
+  if (f){ $("#" + prefix + "Name").textContent = f.name; $("#" + prefix + "Size").textContent = fmt(f.size); }
+  $("#" + prefix + "Pick").value = "";
+}
+
+$("#aRemove").addEventListener("click", () => { A.file = null; A.out = null; showFile("a", null); $("#aGo").disabled = true; $("#aReport").hidden = true; $("#aSuggest").innerHTML = ""; $("#aErr").textContent = ""; });
+$("#cRemove").addEventListener("click", () => { C.file = null; showFile("c", null); $("#cGo").disabled = true; $("#cReport").hidden = true; $("#cErr").textContent = ""; });
+// tabs
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach(x => {
+    const on = x === b; x.setAttribute("aria-selected", String(on));
+    $("#" + x.getAttribute("aria-controls")).hidden = !on;
+  });
+}));
+
+// ---------- pdf text search ----------
+async function findTermsInPdf(buf, list, onPage){
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+  const hits = {}; list.forEach(t => hits[t] = []);
+  let words = 0;
+  for (let i = 1; i <= pdf.numPages; i++){
+    onPage && onPage(i, pdf.numPages);
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    const text = tc.items.map(it => it.str).join(" ").replace(/\s+/g, " ");
+    words += (text.match(/[\p{L}\p{N}][\p{L}\p{N}'’.-]*/gu) || []).length;
+    const low = text.toLowerCase();
+    const squashed = low.replace(/\s+/g, "");
+    list.forEach(t => {
+      const lt = t.toLowerCase();
+      if (low.includes(lt) || squashed.includes(lt.replace(/\s+/g, ""))) hits[t].push(i);
+    });
+    page.cleanup();
+  }
+  return { hits, words, pages: pdf.numPages, pdf };
+}
+
+// =========================================================
+// ANONYMIZE
+// =========================================================
+const A = { file: null, out: null, outName: "" };
+wireFile("a", async f => {
+  if (!f) return;
+  $("#aErr").textContent = ""; $("#aReport").hidden = true; $("#aSuggest").innerHTML = "";
+  const n = f.name.toLowerCase();
+  if (n.endsWith(".doc")) { $("#aErr").textContent = "This is an older .doc file. Save it as .docx in Word first."; return; }
+  if (!n.endsWith(".docx") && !n.endsWith(".pdf")) { $("#aErr").textContent = "Please choose a .docx or .pdf file."; return; }
+  A.file = f; showFile("a", f); $("#aGo").disabled = false;
+  try { suggestNames(await readAuthorsFromFile(f)); } catch(e){}
+});
+async function readAuthorsFromFile(f){
+  const buf = await f.arrayBuffer(), found = new Set();
+  if (f.name.toLowerCase().endsWith(".docx")){
+    const zip = await JSZip.loadAsync(buf);
+    const core = zip.file("docProps/core.xml") ? await zip.file("docProps/core.xml").async("string") : "";
+    [/<dc:creator>([^<]*)</, /<cp:lastModifiedBy>([^<]*)</].forEach(r => { const m = core.match(r); if (m && m[1].trim()) found.add(decodeXml(m[1].trim())); });
+    for (const p of Object.keys(zip.files).filter(p => /^word\/.*\.xml$/.test(p))){
+      const x = await zip.file(p).async("string");
+      for (const m of x.matchAll(/w:author="([^"]*)"/g)) if (m[1].trim()) found.add(decodeXml(m[1].trim()));
+    }
+  } else {
+    const d = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true, updateMetadata: false });
+    const a = d.getAuthor(); if (a && a.trim()) found.add(a.trim());
+  }
+  return [...found];
+}
+function decodeXml(s){ return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'"); }
+function suggestNames(names){
+  const box = $("#aSuggest"); box.innerHTML = "";
+  if (!names.length) return;
+  box.append("Names found in this file's hidden details: ");
+  names.forEach(n => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Add " + n;
+    b.addEventListener("click", () => {
+      const cur = terms($("#aTerms").value);
+      if (!cur.includes(n)) $("#aTerms").value = (cur.concat(n)).join("\n");
+      b.remove();
+    });
+    box.append(b);
+  });
+}
+
+$("#aGo").addEventListener("click", async () => {
+  if (!A.file) return;
+  $("#aGo").disabled = true; $("#aErr").textContent = ""; $("#aReport").hidden = true;
+  try {
+    const list = terms($("#aTerms").value);
+    const repl = $("#aRepl").value;
+    const buf = await A.file.arrayBuffer();
+    if (A.file.name.toLowerCase().endsWith(".docx")) await anonDocx(buf, list, repl);
+    else await anonPdf(buf, list);
+  } catch(e){
+    console.error(e);
+    $("#aErr").textContent = (e && e.name === "PasswordException") ? "This PDF is password protected. Remove the password first." : "Something went wrong: " + (e.message || e);
+  } finally { $("#aGo").disabled = false; $("#aStatus").textContent = ""; }
+});
+$("#aDl").addEventListener("click", async () => {
+  if (!A.out) return;
+  const r = await saveFile(A.out, A.outName);
+  if (r === "declined") $("#aStatus").textContent = "Download cancelled.";
+});
+
+// Replace terms inside a paragraph even when Word has split the text across several runs.
+function replaceInParagraphs(xmlDoc, list, repl){
+  let count = 0;
+  const paras = xmlDoc.getElementsByTagNameNS(W, "p");
+  const res = list.map(t => new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "gi"));
+  for (const p of Array.from(paras)){
+    const nodes = [];
+    const walk = el => {
+      for (const c of el.childNodes){
+        if (c.nodeType !== 1) continue;
+        if (c.namespaceURI === W && c.localName === "p") continue; // nested paragraph handled separately
+        if (c.namespaceURI === W && (c.localName === "t" || c.localName === "delText")) nodes.push(c);
+        else walk(c);
+      }
+    };
+    walk(p);
+    if (!nodes.length) continue;
+    for (const re of res){
+      let full = nodes.map(n => n.textContent).join("");
+      const matches = [...full.matchAll(re)];
+      if (!matches.length) continue;
+      for (let mi = matches.length - 1; mi >= 0; mi--){
+        const s = matches[mi].index, e = s + matches[mi][0].length;
+        let pos = 0, first = true;
+        for (const n of nodes){
+          const t = n.textContent, ns = pos, ne = pos + t.length; pos = ne;
+          if (ne <= s || ns >= e) continue;
+          const a = Math.max(s, ns) - ns, b = Math.min(e, ne) - ns;
+          n.textContent = t.slice(0, a) + (first ? repl : "") + t.slice(b);
+          n.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
+          first = false;
+        }
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+async function anonDocx(buf, list, repl){
+  $("#aStatus").textContent = "Reading the Word file…";
+  const zip = await JSZip.loadAsync(buf);
+  const report = [];
+  let removedProps = [];
+
+  // File properties
+  const coreF = zip.file("docProps/core.xml");
+  if (coreF){
+    let x = await coreF.async("string");
+    const fields = [["dc:creator","Author"],["cp:lastModifiedBy","Last saved by"],["cp:keywords","Keywords"],["dc:description","Comments"],["cp:category","Category"],["cp:contentStatus","Status"]];
+    fields.forEach(([tag, label]) => {
+      const re = new RegExp(`<${tag}([^>]*)>([^<]*)</${tag}>`);
+      const m = x.match(re);
+      if (m && m[2].trim()){ removedProps.push(`${label}: ${decodeXml(m[2].trim())}`); x = x.replace(re, `<${tag}$1></${tag}>`); }
+    });
+    zip.file("docProps/core.xml", x);
+  }
+  const appF = zip.file("docProps/app.xml");
+  if (appF){
+    let x = await appF.async("string");
+    [["Company","Company"],["Manager","Manager"]].forEach(([tag, label]) => {
+      const re = new RegExp(`<${tag}>([^<]*)</${tag}>`);
+      const m = x.match(re);
+      if (m && m[1].trim()){ removedProps.push(`${label}: ${decodeXml(m[1].trim())}`); x = x.replace(re, `<${tag}></${tag}>`); }
+    });
+    zip.file("docProps/app.xml", x);
+  }
+  const custF = zip.file("docProps/custom.xml");
+  if (custF){
+    let x = await custF.async("string");
+    const n = (x.match(/<property\b/g) || []).length;
+    if (n){ x = x.replace(/<property\b[\s\S]*?<\/property>/g, ""); removedProps.push(`${n} custom propert${n > 1 ? "ies" : "y"}`); zip.file("docProps/custom.xml", x); }
+  }
+  report.push(removedProps.length
+    ? { s: "pass", t: "Removed hidden file details", d: removedProps.join(" | ") }
+    : { s: "pass", t: "No author details found in file properties" });
+
+  // Word parts
+  const parts = Object.keys(zip.files).filter(p => /^word\/(document|header\d*|footer\d*|footnotes|endnotes|comments[A-Za-z]*|people)\.xml$/.test(p));
+  let authorAttrs = 0, textHits = 0, ins = 0, del = 0, comments = 0;
+  for (const p of parts){
+    $("#aStatus").textContent = "Cleaning " + p.replace("word/", "") + "…";
+    let x = await zip.file(p).async("string");
+    if (p === "word/document.xml"){ ins += (x.match(/<w:ins\b/g) || []).length; del += (x.match(/<w:del\b/g) || []).length; }
+    if (p === "word/comments.xml") comments += (x.match(/<w:comment\b/g) || []).length;
+    const before = (x.match(/\b(w|w15):(author|initials|userId|providerId)="[^"]*"/g) || []).filter(a => !/=""$/.test(a)).length;
+    x = x.replace(/\bw:author="[^"]*"/g, 'w:author="Anonymous"')
+         .replace(/\bw:initials="[^"]*"/g, 'w:initials="A"')
+         .replace(/\bw15:author="[^"]*"/g, 'w15:author="Anonymous"')
+         .replace(/\bw15:userId="[^"]*"/g, 'w15:userId="Anonymous"')
+         .replace(/\bw15:providerId="[^"]*"/g, 'w15:providerId="None"');
+    authorAttrs += before;
+    if (list.length && p !== "word/people.xml"){
+      const decl = (x.match(/^<\?xml[^>]*\?>/) || [""])[0];
+      const doc = new DOMParser().parseFromString(x, "application/xml");
+      if (doc.getElementsByTagName("parsererror").length) throw new Error("Couldn't read " + p + " inside the Word file.");
+      const n = replaceInParagraphs(doc, list, repl);
+      if (n){
+        textHits += n;
+        let out = new XMLSerializer().serializeToString(doc);
+        if (decl && !out.startsWith("<?xml")) out = decl + "\n" + out;
+        x = out;
+      }
+    }
+    zip.file(p, x);
+  }
+  if (authorAttrs) report.push({ s: "pass", t: "Removed names from tracked changes and comments", d: `${authorAttrs} author tag${authorAttrs > 1 ? "s" : ""} replaced with "Anonymous".` });
+  if (list.length) report.push(textHits
+    ? { s: "pass", t: `Replaced ${textHits} mention${textHits > 1 ? "s" : ""} of your listed names`, d: "Includes body text, headers, footers, footnotes and comments." }
+    : { s: "info", t: "None of your listed names were found in the text" });
+  else report.push({ s: "warn", t: "No names were listed", d: "Only hidden details were cleaned. Add your names above to also remove them from the text." });
+  if (ins || del) report.push({ s: "warn", t: `Tracked changes are still in the file (${ins + del})`, d: "Reviewers can see edit history. In Word, use Review > Accept All Changes before submitting." });
+  if (comments) report.push({ s: "warn", t: `${comments} comment${comments > 1 ? "s" : ""} still in the file`, d: "Their authors are now anonymous, but the comments themselves may reveal you. Consider deleting them." });
+
+  // Leftover check
+  if (list.length){
+    const left = [];
+    for (const p of parts.filter(p => p !== "word/people.xml")){
+      const txt = (await zip.file(p).async("string")).replace(/<[^>]+>/g, "").toLowerCase();
+      list.forEach(t => { if (txt.includes(t.toLowerCase()) && !left.includes(t)) left.push(t); });
+    }
+    if (left.length) report.push({ s: "warn", t: "Some names may still be present", d: `Possibly in text boxes, split words or special fields: ${left.join(", ")}. Search for them in Word.` });
+  }
+  report.push({ s: "info", t: "Check images and self-citations yourself", d: "Names inside pictures, logos, or phrases like \"our previous study\" can't be detected automatically." });
+
+  A.out = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", compression: "DEFLATE" });
+  A.outName = baseName(A.file.name) + "-anonymized.docx";
+  $("#aTitle").textContent = "Your anonymized Word file is ready";
+  $("#aSum").textContent = "Open it once and read through before submitting.";
+  rows($("#aRows"), report); $("#aReport").hidden = false; $("#aDl").hidden = false;
+}
+
+async function anonPdf(buf, list){
+  $("#aStatus").textContent = "Reading the PDF…";
+  const report = [];
+  const d = await PDFLib.PDFDocument.load(buf.slice(0), { ignoreEncryption: true, updateMetadata: false });
+  if (d.isEncrypted) throw new Error("This PDF is encrypted, so it can't be cleaned here. Export it again without a password.");
+  const { PDFName, PDFDict, PDFArray } = PDFLib;
+  const info = d.getInfoDict();
+  const removed = [];
+  for (const [k, v] of info.entries()){
+    const key = k.toString().replace(/^\//, "");
+    if (key === "Title") continue;
+    let val = ""; try { val = v.decodeText ? v.decodeText() : String(v); } catch(e){ val = String(v); }
+    if (["Author","Creator","Producer","Subject","Keywords"].includes(key) && val.trim()) removed.push(`${key}: ${val.trim()}`);
+    info.delete(k);
+  }
+  const hadXmp = d.catalog.has(PDFName.of("Metadata"));
+  if (hadXmp) d.catalog.delete(PDFName.of("Metadata"));
+  let annAuthors = 0;
+  d.getPages().forEach(pg => {
+    const annots = pg.node.lookup(PDFName.of("Annots"));
+    if (!(annots instanceof PDFArray)) return;
+    for (let i = 0; i < annots.size(); i++){
+      const a = annots.lookup(i);
+      if (a instanceof PDFDict && a.has(PDFName.of("T"))){ a.delete(PDFName.of("T")); annAuthors++; }
+    }
+  });
+  report.push(removed.length || hadXmp
+    ? { s: "pass", t: "Removed hidden document details", d: (removed.join(" | ") || "") + (hadXmp ? (removed.length ? " | " : "") + "Extended metadata (XMP)" : "") }
+    : { s: "pass", t: "No author details found in document properties" });
+  const title = d.getTitle();
+  if (title && list.some(t => title.toLowerCase().includes(t.toLowerCase()))) report.push({ s: "warn", t: "The document title contains a listed name", d: `Title: ${title}` });
+  if (annAuthors) report.push({ s: "pass", t: `Removed author names from ${annAuthors} comment${annAuthors > 1 ? "s" : ""}` });
+
+  if (list.length){
+    const { hits } = await findTermsInPdf(buf, list, (i, n) => $("#aStatus").textContent = `Searching page ${i} of ${n}…`);
+    const found = list.filter(t => hits[t].length);
+    if (found.length) found.forEach(t => report.push({ s: "fail", t: `"${t}" is still visible`, d: `On page${hits[t].length > 1 ? "s" : ""} ${hits[t].join(", ")}. Remove it in your original Word or LaTeX file and export the PDF again.` }));
+    else report.push({ s: "pass", t: "None of your listed names appear in the visible text" });
+  } else report.push({ s: "warn", t: "No names were listed", d: "Only hidden details were cleaned. Add your names above to check the visible text." });
+  report.push({ s: "info", t: "Check images and self-citations yourself", d: "Names inside pictures or scanned pages can't be detected." });
+
+  const bytes = await d.save({ updateMetadata: false, useObjectStreams: true });
+  A.out = new Blob([bytes], { type: "application/pdf" });
+  A.outName = baseName(A.file.name) + "-anonymized.pdf";
+  const bad = report.some(r => r.s === "fail");
+  $("#aTitle").textContent = bad ? "Hidden details removed, but names are still visible" : "Your cleaned PDF is ready";
+  $("#aSum").textContent = bad ? "The file below has clean metadata, but fix the visible names before submitting." : "Open it once and read through before submitting.";
+  rows($("#aRows"), report); $("#aReport").hidden = false;
+}
+
+// =========================================================
+// CHECK
+// =========================================================
+const C = { file: null };
+wireFile("c", f => {
+  if (!f) return;
+  $("#cErr").textContent = ""; $("#cReport").hidden = true;
+  if (!f.name.toLowerCase().endsWith(".pdf") && f.type !== "application/pdf"){ $("#cErr").textContent = "Please choose a PDF file."; return; }
+  C.file = f; showFile("c", f); $("#cGo").disabled = false;
+});
+$("#cBlind").addEventListener("change", e => $("#cNamesField").hidden = !e.target.checked);
+
+function fontReport(doc){
+  const { PDFName, PDFDict, PDFArray, PDFStream } = PDFLib;
+  const fonts = new Map(); const seen = new Set();
+  const nm = v => v ? v.toString().replace(/^\//, "") : "";
+  function scanRes(res, depth){
+    if (!(res instanceof PDFDict) || seen.has(res) || depth > 6) return;
+    seen.add(res);
+    const fd = res.lookup(PDFName.of("Font"));
+    if (fd instanceof PDFDict){
+      for (const [, ref] of fd.entries()){
+        const f = doc.context.lookup(ref);
+        if (!(f instanceof PDFDict)) continue;
+        const sub = nm(f.lookup(PDFName.of("Subtype")));
+        let base = nm(f.lookup(PDFName.of("BaseFont"))) || "(unnamed)";
+        let desc = f.lookup(PDFName.of("FontDescriptor"));
+        if (sub === "Type0"){
+          const dfs = f.lookup(PDFName.of("DescendantFonts"));
+          if (dfs instanceof PDFArray){ const df = dfs.lookup(0); if (df instanceof PDFDict) desc = df.lookup(PDFName.of("FontDescriptor")); }
+        }
+        let embedded = false;
+        if (sub === "Type3") embedded = true;
+        else if (desc instanceof PDFDict) embedded = ["FontFile","FontFile2","FontFile3"].some(k => desc.has(PDFName.of(k)));
+        const clean = base.replace(/^[A-Z]{6}\+/, "");
+        const prev = fonts.get(clean);
+        fonts.set(clean, { name: clean, sub, embedded: prev ? (prev.embedded && embedded) : embedded });
+      }
+    }
+    const xo = res.lookup(PDFName.of("XObject"));
+    if (xo instanceof PDFDict){
+      for (const [, ref] of xo.entries()){
+        const s = doc.context.lookup(ref);
+        if (s instanceof PDFStream && nm(s.dict.lookup(PDFName.of("Subtype"))) === "Form") scanRes(s.dict.lookup(PDFName.of("Resources")), depth + 1);
+      }
+    }
+  }
+  doc.getPages().forEach(p => { try { scanRes(p.node.Resources(), 0); } catch(e){} });
+  return [...fonts.values()];
+}
+
+function sizeName(w, h){
+  const near = (a, b) => Math.abs(a - b) < 4;
+  const [s, l] = [Math.min(w, h), Math.max(w, h)];
+  if (near(s, 595.3) && near(l, 841.9)) return "A4";
+  if (near(s, 612) && near(l, 792)) return "Letter";
+  return `${(s / 72 * 25.4).toFixed(0)} × ${(l / 72 * 25.4).toFixed(0)} mm`;
+}
+
+$("#cGo").addEventListener("click", async () => {
+  if (!C.file) return;
+  $("#cGo").disabled = true; $("#cErr").textContent = ""; $("#cReport").hidden = true;
+  const out = [];
+  try {
+    const buf = await C.file.arrayBuffer();
+    const num = id => { const v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : null; };
+    const maxMb = num("#cMaxMb"), maxPages = num("#cMaxPages"), maxWords = num("#cMaxWords");
+    const wantSize = $("#cPage").value, needFonts = $("#cFonts").checked, blind = $("#cBlind").checked;
+    const names = blind ? terms($("#cNames").value) : [];
+
+    // file size
+    const mb = C.file.size / 1048576;
+    out.push(maxMb == null ? { s: "info", t: `File size: ${fmt(C.file.size)}` }
+      : mb <= maxMb ? { s: "pass", t: `File size ${fmt(C.file.size)} is within ${maxMb} MB` }
+      : { s: "fail", t: `File is ${fmt(C.file.size)}, over the ${maxMb} MB limit`, d: "Try compressing images before exporting, or use a PDF compressor that keeps text selectable." });
+
+    $("#cStatus").textContent = "Inspecting the PDF structure…";
+    const doc = await PDFLib.PDFDocument.load(buf.slice(0), { ignoreEncryption: true, updateMetadata: false });
+    if (doc.isEncrypted) out.push({ s: "fail", t: "The PDF is password protected or encrypted", d: "Most submission systems reject protected files. Export it again without security settings." });
+    else out.push({ s: "pass", t: "No password or security restrictions" });
+
+    // text scan + pages
+    const { hits, words, pages, pdf } = await findTermsInPdf(buf, names, (i, n) => $("#cStatus").textContent = `Reading page ${i} of ${n}…`);
+    out.push(maxPages == null ? { s: "info", t: `${pages} page${pages > 1 ? "s" : ""}` }
+      : pages <= maxPages ? { s: "pass", t: `${pages} pages, within the ${maxPages} page limit` }
+      : { s: "fail", t: `${pages} pages, over the ${maxPages} page limit`, d: "Check whether the journal counts references and appendices toward the limit." });
+    out.push(maxWords == null ? { s: "info", t: `About ${words.toLocaleString()} words`, d: "Counted from the PDF text, including references, captions and headers, so it will be higher than Word's count." }
+      : words <= maxWords ? { s: "pass", t: `About ${words.toLocaleString()} words, within ${maxWords.toLocaleString()}`, d: "Approximate. Includes references and captions." }
+      : { s: "warn", t: `About ${words.toLocaleString()} words, above ${maxWords.toLocaleString()}`, d: "This count includes references, captions and headers. Check whether the journal excludes them before cutting text." });
+    if (words < 50 * pages) out.push({ s: "warn", t: "Very little text was found", d: "The PDF may be scanned or made of images. Many journals need text that can be searched and selected." });
+
+    // page sizes
+    const sizes = {};
+    for (let i = 1; i <= pages; i++){ const vp = (await pdf.getPage(i)).getViewport({ scale: 1 }); const n = sizeName(vp.width, vp.height); (sizes[n] = sizes[n] || []).push(i); }
+    const sizeKeys = Object.keys(sizes);
+    if (sizeKeys.length > 1) out.push({ s: "warn", t: "Pages have different sizes", d: sizeKeys.map(k => `${k}: page${sizes[k].length > 1 ? "s" : ""} ${sizes[k].slice(0, 8).join(", ")}${sizes[k].length > 8 ? "…" : ""}`).join(" | ") });
+    if (wantSize){
+      const wrong = sizeKeys.filter(k => k !== wantSize);
+      out.push(wrong.length ? { s: "fail", t: `Not all pages are ${wantSize}`, d: `Found: ${sizeKeys.join(", ")}. Change the page size in your document settings and export again.` }
+        : { s: "pass", t: `All pages are ${wantSize}` });
+    } else if (sizeKeys.length === 1) out.push({ s: "info", t: `Page size: ${sizeKeys[0]}` });
+
+    // fonts
+    $("#cStatus").textContent = "Checking fonts…";
+    const fonts = fontReport(doc);
+    const notEmb = fonts.filter(f => !f.embedded), t3 = fonts.filter(f => f.sub === "Type3");
+    if (!fonts.length) out.push({ s: "info", t: "No fonts found", d: "The PDF may contain only images." });
+    else if (needFonts) out.push(notEmb.length
+      ? { s: "fail", t: `${notEmb.length} font${notEmb.length > 1 ? "s are" : " is"} not embedded`, d: notEmb.map(f => f.name).join(", ") + ". In Word, use File > Options > Save > Embed fonts, or export with the \"PDF/A\" option. In LaTeX, check your PDF export settings." }
+      : { s: "pass", t: `All ${fonts.length} fonts are embedded` });
+    else out.push({ s: "info", t: `${fonts.length} fonts, ${notEmb.length} not embedded` });
+    if (t3.length) out.push({ s: "warn", t: `${t3.length} Type 3 (bitmap-style) font${t3.length > 1 ? "s" : ""}`, d: `${t3.map(f => f.name).join(", ")}. Some publishers reject these. They often come from older LaTeX setups or pasted figures.` });
+
+    // blind review
+    if (blind){
+      const a = doc.getAuthor(), cr = doc.getCreator();
+      out.push(a && a.trim() ? { s: "fail", t: "The file's hidden details include an author name", d: `Author: ${a}. Use the Anonymize tool to remove it.` }
+        : { s: "pass", t: "No author name in hidden file details" });
+      if (names.length){
+        const found = names.filter(t => hits[t].length);
+        if (found.length) found.forEach(t => out.push({ s: "fail", t: `"${t}" appears in the text`, d: `On page${hits[t].length > 1 ? "s" : ""} ${hits[t].join(", ")}.` }));
+        else out.push({ s: "pass", t: "None of the listed names appear in the text" });
+      } else out.push({ s: "warn", t: "No names were listed", d: "Add author names above to check the visible text too." });
+      let ann = 0;
+      doc.getPages().forEach(pg => { const arr = pg.node.lookup(PDFLib.PDFName.of("Annots")); if (arr instanceof PDFLib.PDFArray) for (let i = 0; i < arr.size(); i++){ const x = arr.lookup(i); if (x instanceof PDFLib.PDFDict && x.has(PDFLib.PDFName.of("T"))) ann++; } });
+      if (ann) out.push({ s: "fail", t: `${ann} comment${ann > 1 ? "s" : ""} or annotation${ann > 1 ? "s" : ""} carry an author name`, d: "Use the Anonymize tool, or delete the comments before submitting." });
+    }
+
+    const fails = out.filter(r => r.s === "fail").length, warns = out.filter(r => r.s === "warn").length;
+    $("#cTitle").textContent = fails ? `${fails} problem${fails > 1 ? "s" : ""} to fix` : warns ? "Looks good, with a few things to check" : "Ready to submit";
+    $("#cSum").textContent = "Based only on the requirements you entered. Always confirm against the journal's current guidelines.";
+    rows($("#cRows"), out); $("#cReport").hidden = false;
+  } catch(e){
+    console.error(e);
+    $("#cErr").textContent = (e && e.name === "PasswordException") ? "This PDF is password protected, so it can't be read. Most journals won't accept protected PDFs either." : (e && e.name === "InvalidPDFException") ? "This file doesn't look like a valid PDF." : "Something went wrong: " + (e.message || e);
+  } finally { $("#cGo").disabled = false; $("#cStatus").textContent = ""; }
+});
+})();
+</script>
+</body>
+</html>

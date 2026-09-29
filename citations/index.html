@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Citation matcher: find missing and uncited references | Paperlight</title>
+<meta name="description" content="Check that every in-text citation has a reference, and every reference is cited. Works with APA, Harvard and numbered styles. Free and private.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+.ctx{font-size:13px;color:var(--muted);margin-top:4px;font-style:italic}
+.hint{display:inline-block;font-size:13px;font-weight:500;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:2px 8px;margin-top:6px}
+details{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+summary{cursor:pointer;font-weight:500}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Citation matcher</h1>
+  <p class="lede">Find citations that are missing from your reference list, and references you never cite. Works with author-year styles (APA, Harvard, Chicago) and numbered styles like [1].</p>
+
+  <div class="tabs" role="tablist" aria-label="Input">
+    <button role="tab" id="t-file" aria-controls="p-file" aria-selected="true">Word file</button>
+    <button role="tab" id="t-paste" aria-controls="p-paste" aria-selected="false">Paste text</button>
+  </div>
+
+  <section class="panel">
+    <div id="p-file" role="tabpanel" aria-labelledby="t-file">
+      <label class="drop" id="drop">
+        <input type="file" id="pick" accept=".docx">
+        <strong>Choose your manuscript</strong>
+        <span>Word (.docx) with a References section, or drag it here</span>
+      </label>
+      <div class="file" id="fileRow"><div class="name" id="fileName"></div><div class="size" id="fileSize"></div><button class="linkbtn" id="change" type="button">Change</button><button class="xbtn" id="remove" type="button" aria-label="Remove file" title="Remove file">×</button></div>
+    </div>
+    <div id="p-paste" role="tabpanel" aria-labelledby="t-paste" hidden>
+      <div class="field" style="margin-top:0">
+        <label for="body">Main text</label>
+        <textarea id="body" placeholder="Paste the text of your paper here"></textarea>
+      </div>
+      <div class="field">
+        <label for="refs">Reference list</label>
+        <p class="help">One reference per line. Leave empty if the text above already ends with a "References" heading.</p>
+        <textarea id="refs"></textarea>
+      </div>
+    </div>
+
+    <button class="btn" id="go" type="button" disabled>Match citations</button>
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="msg" id="err"></div>
+
+    <div class="report" id="report" hidden>
+      <h2 id="rTitle"></h2>
+      <p class="sum" id="rSum"></p>
+      <div class="stats" id="stats"></div>
+      <div id="rBody"></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h3>Good to know</h3>
+    <p>Matching uses the first author's surname and the year, so "Rahman et al. (2020)" matches "Rahman, M., Khan, S., ... (2020)". Organisation names and their abbreviations, like "World Health Organization" and "WHO", are matched too.</p>
+    <p>Unusual formats can confuse it: names with particles, citations inside footnotes, and superscript number citations (which lose their formatting when read). Treat the results as a checklist to review, not a final verdict.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+(function(){
+const { $, esc } = PL;
+PL.tabs();
+let file = null;
+const refresh = () => {
+  const pasteMode = !$("#p-paste").hidden;
+  $("#go").disabled = pasteMode ? !$("#body").value.trim() : !file;
+};
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", refresh));
+$("#body").addEventListener("input", refresh);
+PL.wireDrop($("#drop"), $("#pick"), files => {
+  const f = files[0]; $("#err").textContent = "";
+  if (/\.doc$/i.test(f.name)) { $("#err").textContent = "This is an older .doc file. Save it as .docx in Word first, or use Paste text."; return; }
+  if (!/\.docx$/i.test(f.name)) { $("#err").textContent = "Please choose a .docx file, or use Paste text."; return; }
+  file = f; $("#drop").style.display = "none"; $("#fileRow").classList.add("show");
+  $("#fileName").textContent = f.name; $("#fileSize").textContent = PL.fmt(f.size); refresh();
+});
+$("#change").addEventListener("click", () => $("#pick").click());
+$("#remove").addEventListener("click", () => { file = null; $("#fileRow").classList.remove("show"); $("#drop").style.display = ""; $("#report").hidden = true; $("#err").textContent = ""; refresh(); });
+
+// ---------------- parsing ----------------
+const YEAR = "(?:1[6-9]|20)\\d{2}[a-z]?|n\\.\\s?d\\.|in\\s+press|forthcoming";
+const YEAR_RE = new RegExp("(" + YEAR + ")", "i");
+const YEAR_G = () => new RegExp("(" + YEAR + ")", "gi");
+const NAME = "\\p{Lu}[\\p{L}\\p{M}'’\\-]+";
+const NARR = new RegExp(`((?:${NAME})(?:\\s+(?:and|&)\\s+${NAME})?(?:\\s+et\\s+al\\.?)?)(?:['’]s)?\\s*\\(((?:${YEAR})(?:\\s*[,;]\\s*(?:${YEAR}))*)(?:,\\s*(?:p|pp|para)\\.\\s*[\\d–\\-]+)?\\)`, "gu");
+const STOP = new Set(["january","february","march","april","may","june","july","august","september","october","november","december","jan","feb","mar","apr","jun","jul","aug","sep","sept","oct","nov","dec","in","the","since","from","during","until","by","table","figure","fig","section","chapter","appendix","equation","eq","year","years","summer","winter","spring","autumn","monsoon","census","survey","phase","wave","round","period","between","after","before","about","approximately","around","of","until","as","see","and","or","this","these","that","its","their","our","early","late","mid"]);
+const ACR_SKIP = new Set(["of","and","the","for","on","in","&","de","des","la","le"]);
+
+const fold = s => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+function surnameKey(raw){
+  let s = raw.replace(/\[[^\]]*\]|\([^)]*\)/g, " ").replace(/\bet\s+al\.?/gi, " ").trim();
+  let toks = s.split(/\s+/).filter(Boolean);
+  while (toks.length > 1 && /^(\p{Lu}\.?){1,3}\.?$/u.test(toks[toks.length - 1]) && toks[toks.length-1].length <= 4) toks.pop(); // drop trailing initials
+  const last = (toks[toks.length - 1] || "").replace(/[^\p{L}\p{M}'’\-]/gu, "");
+  return fold(last).replace(/[’']/g, "'");
+}
+function acronym(raw){
+  const words = raw.replace(/\[[^\]]*\]|\([^)]*\)/g, " ").split(/\s+/).filter(w => /^\p{Lu}/u.test(w) && !ACR_SKIP.has(w.toLowerCase()));
+  return words.length >= 2 ? words.map(w => w[0]).join("").toLowerCase() : null;
+}
+function bracketAcr(raw){ const m = raw.match(/[\[(]([A-Z][A-Za-z&]{1,9})[\])]/); return m ? m[1].toLowerCase() : null; }
+const normYear = y => fold(y).replace(/\s+/g, "").replace(/\./g, "").replace("inpress", "inpress");
+
+function parseRefAD(text){
+  const m = text.match(YEAR_RE);
+  if (!m) return null;
+  const authorPart = text.slice(0, m.index).replace(/[\s,.(]+$/, "");
+  if (!authorPart) return null;
+  const first = authorPart.split(",")[0];
+  const key = surnameKey(first);
+  if (!key) return null;
+  const alts = [acronym(first), bracketAcr(authorPart)].filter(Boolean);
+  return { key, year: normYear(m[1]), alts, authors: authorPart, text };
+}
+
+function citesAD(text){
+  const out = [];
+  // narrative: Smith (2020), Smith and Jones (2019a, 2020), Smith et al. (2018)
+  for (const m of text.matchAll(NARR)){
+    const first = m[1].split(/\s+(?:and|&)\s+/)[0];
+    if (STOP.has(fold(first.replace(/\s+et\s+al\.?/i, "")))) continue;
+    for (const y of m[2].matchAll(YEAR_G())) out.push({ name: m[1].trim(), key: surnameKey(first), alts: [], year: normYear(y[1]), at: m.index });
+  }
+  // parenthetical: (Smith, 2020; Jones & Lee, 2019a; WHO, 2021)
+  for (const m of text.matchAll(/\(([^()]{2,400})\)/g)){
+    const inner = m[1];
+    if (!YEAR_RE.test(inner)) continue;
+    for (let seg of inner.split(";")){
+      seg = seg.replace(/^\s*(e\.g\.,?|i\.e\.,?|see\s+also|see|cf\.|for\s+example,?|for\s+a\s+review,?\s*see|reviewed\s+in|as\s+cited\s+in)\s*/i, "").trim();
+      const ys = [...seg.matchAll(YEAR_G())];
+      if (!ys.length) continue;
+      const authorPart = seg.slice(0, ys[0].index).replace(/[\s,]+$/, "");
+      if (!authorPart || !/^\p{Lu}/u.test(authorPart)) continue;
+      const first = authorPart.split(/\s*(?:,|&|\band\b)\s*/)[0];
+      if (!first || STOP.has(fold(first.replace(/\s+et\s+al\.?/i, "")))) continue;
+      if (first.split(/\s+/).length > 6) continue;
+      const between = seg.slice(ys[0].index);
+      ys.forEach(y => { if (!/p{1,2}\.\s*$/.test(between.slice(0, y.index - ys[0].index))) out.push({ name: authorPart, key: surnameKey(first), alts: [acronym(first), bracketAcr(authorPart), fold(first).replace(/[^a-z]/g, "")].filter(Boolean), year: normYear(y[1]), at: m.index }); });
+    }
+  }
+  return out;
+}
+
+function expandNums(s){
+  const out = [];
+  s.split(/\s*,\s*/).forEach(part => {
+    const r = part.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+    if (r){ const a = +r[1], b = +r[2]; if (b >= a && b - a < 200) for (let i = a; i <= b; i++) out.push(i); }
+    else if (/^\d+$/.test(part)) out.push(+part);
+  });
+  return out;
+}
+const NUM_RE = /\[(\d+(?:\s*[-–,]\s*\d+)*)\]/g;
+
+function splitBodyRefs(blocks){
+  let idx = -1;
+  blocks.forEach((b, i) => { const h = PL.isHeading(b) || (b.text.length < 40 ? b.text : null); if (h && PL.REF_HEAD_RE.test(h.trim())) idx = i; });
+  if (idx < 0) return null;
+  const body = blocks.slice(0, idx), refs = [];
+  for (const b of blocks.slice(idx + 1)){
+    const h = PL.isHeading(b);
+    if (h && /^(appendix|appendices|supplementary|tables?|figures?|figure\s+(captions|legends)|list\s+of\s+(tables|figures))/i.test(h.replace(/^\d+(\.\d+)*\.?\s*/, ""))) break;
+    if (b.kind === "cell" || b.kind === "note") continue;
+    refs.push(b.text);
+  }
+  return { body, refs };
+}
+
+function context(text, at){
+  const s = Math.max(0, at - 50), e = Math.min(text.length, at + 90);
+  return (s ? "…" : "") + text.slice(s, e).replace(/\s+/g, " ").trim() + (e < text.length ? "…" : "");
+}
+function lev(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const showYear = y => y === "nd" ? "n.d." : y === "inpress" ? "in press" : y;
+
+// ---------------- analysis ----------------
+function analyze(bodyBlocks, refLines){
+  const bodyText = bodyBlocks.filter(b => b.kind !== "note" || true).map(b => b.text).join("\n");
+  // merge wrapped reference lines (lines without a year or leading number get attached to previous)
+  const numCount = (bodyText.match(NUM_RE) || []).length;
+  const adCites = citesAD(bodyText);
+  const numeric = numCount >= 3 && numCount > adCites.length;
+  const refs = [];
+  refLines.forEach(l => {
+    const t = l.trim(); if (!t) return;
+    const startsNew = numeric ? /^\[?\d+[\].)]?\s/.test(t) || !refs.length : YEAR_RE.test(t.slice(0, 200)) && /^\p{Lu}|^\[?\d/u.test(t);
+    if (!startsNew && refs.length && t.length < 400) refs[refs.length - 1] += " " + t; else refs.push(t);
+  });
+  return numeric ? analyzeNumeric(bodyText, refs) : analyzeAD(bodyText, adCites, refs);
+}
+
+function analyzeAD(bodyText, cites, refLines){
+  const refs = refLines.map(parseRefAD);
+  const unparsed = refLines.filter((l, i) => !refs[i]);
+  const R = refs.filter(Boolean);
+  // group citations
+  const cited = new Map();
+  cites.forEach(c => {
+    const id = c.key + "|" + c.year;
+    if (!cited.has(id)) cited.set(id, { ...c, count: 0, ctx: context(bodyText, c.at) });
+    const g = cited.get(id); g.count++; g.alts = [...new Set(g.alts.concat(c.alts))];
+  });
+  const refUsed = new Set();
+  const matchRef = (c) => R.findIndex(r => r.year === c.year && (r.key === c.key || r.alts.includes(c.key) || c.alts.includes(r.key) || c.alts.some(a => r.alts.includes(a))));
+  const missing = [];
+  for (const c of cited.values()){
+    let i = matchRef(c);
+    if (i < 0 && /^\d{4}$/.test(c.year)){ // cited 2020 but list has 2020a/2020b
+      const suff = R.map((r, k) => [r, k]).filter(([r]) => r.key === c.key && r.year.startsWith(c.year) && r.year.length === 5);
+      if (suff.length){ suff.forEach(([, k]) => refUsed.add(k)); missing.push({ c, hint: `The reference list has ${suff.map(([r]) => showYear(r.year)).join(" and ")}. Add the letter to this citation.`, soft: true }); continue; }
+    }
+    if (i >= 0){ refUsed.add(i); R.forEach((r, k) => { if (k !== i && r.key === R[i].key && r.year === R[i].year) refUsed.add(k); }); continue; }
+    let hint = "";
+    const sameName = R.filter(r => r.key === c.key);
+    const closeName = R.filter(r => r.year === c.year && r.key !== c.key && lev(r.key, c.key) <= (c.key.length > 5 ? 2 : 1));
+    if (sameName.length) hint = `Year mismatch? The reference list has ${cap(c.key)} ${sameName.map(r => showYear(r.year)).join(", ")}.`;
+    else if (closeName.length) hint = `Spelling? The reference list has ${closeName.map(r => cap(r.key) + " " + showYear(r.year)).join(", ")}.`;
+    missing.push({ c, hint });
+  }
+  const uncited = R.map((r, k) => ({ r, k })).filter(({ k }) => !refUsed.has(k));
+  // duplicates
+  const seen = new Map(), dups = [];
+  R.forEach(r => { const id = fold(r.text).replace(/[^a-z0-9]/g, "").slice(0, 120); if (seen.has(id)) dups.push(r); else seen.set(id, r); });
+  return { style: "author-year", citedCount: cites.length, uniqueCited: cited.size, refCount: refLines.length, missing, uncited, dups, unparsed };
+}
+
+function analyzeNumeric(bodyText, refLines){
+  const nums = [], firstSeen = new Map();
+  for (const m of bodyText.matchAll(NUM_RE)) expandNums(m[1]).forEach(n => { nums.push(n); if (!firstSeen.has(n)) firstSeen.set(n, m.index); });
+  const refNums = refLines.map((l, i) => { const m = l.match(/^\[?(\d+)[\].)]?\s/); return m ? +m[1] : i + 1; });
+  const refSet = new Set(refNums), citeSet = new Set(nums);
+  const missing = [...citeSet].filter(n => !refSet.has(n)).sort((a, b) => a - b).map(n => ({ n, ctx: context(bodyText, firstSeen.get(n)) }));
+  const uncited = refNums.map((n, i) => ({ n, text: refLines[i] })).filter(x => !citeSet.has(x.n));
+  const order = [...firstSeen.entries()].sort((a, b) => a[1] - b[1]).map(e => e[0]);
+  let outOfOrder = null, maxSoFar = 0;
+  for (const n of order){ if (n > maxSoFar + 1 && !outOfOrder){ outOfOrder = { jump: n, expected: maxSoFar + 1 }; } maxSoFar = Math.max(maxSoFar, n); }
+  const dupNums = refNums.filter((n, i) => refNums.indexOf(n) !== i);
+  return { style: "numbered", citedCount: nums.length, uniqueCited: citeSet.size, refCount: refLines.length, missing, uncited, outOfOrder, dupNums };
+}
+
+// ---------------- render ----------------
+function stat(v, label, cls){ return `<div class="stat ${cls || ""}"><b>${v}</b><span>${label}</span></div>`; }
+function render(r){
+  const miss = r.missing.length, unc = r.uncited.length;
+  $("#rTitle").textContent = !miss && !unc ? "Everything matches" : `${miss + unc} thing${miss + unc > 1 ? "s" : ""} to check`;
+  $("#rSum").textContent = `Detected ${r.style === "author-year" ? "an" : "a"} ${r.style} citation style. Found ${r.citedCount} citation${r.citedCount === 1 ? "" : "s"} in the text (${r.uniqueCited} different sources) and ${r.refCount} reference${r.refCount === 1 ? "" : "s"}.`;
+  $("#stats").innerHTML = stat(miss, "cited but missing from references", miss ? "bad" : "ok") + stat(unc, "in references but never cited", unc ? "warn" : "ok");
+  let h = "";
+  if (r.style === "author-year"){
+    h += `<h3>Cited in the text, missing from the reference list</h3>`;
+    h += miss ? `<ul class="rows">${r.missing.map(({ c, hint }) => `<li><div class="t">${esc(c.name)}, ${esc(showYear(c.year))}${c.count > 1 ? ` <span style="color:var(--muted);font-weight:400">(cited ${c.count} times)</span>` : ""}</div><div class="ctx">${esc(c.ctx)}</div>${hint ? `<div class="hint">${esc(hint)}</div>` : ""}</li>`).join("")}</ul>` : `<p class="sum">None. Every citation has a matching reference.</p>`;
+    h += `<h3>In the reference list, never cited</h3>`;
+    h += unc ? `<ul class="rows">${r.uncited.map(({ r: x }) => `<li><div class="t">${esc(cap(x.key))}, ${esc(showYear(x.year))}</div><div class="d">${esc(x.text.slice(0, 260))}${x.text.length > 260 ? "…" : ""}</div></li>`).join("")}</ul>` : `<p class="sum">None. Every reference is cited.</p>`;
+    if (r.dups.length) h += `<h3>Possible duplicates</h3><ul class="rows">${r.dups.map(x => `<li><div class="d">${esc(x.text.slice(0, 260))}</div></li>`).join("")}</ul>`;
+    if (r.unparsed.length) h += `<details><summary>${r.unparsed.length} reference${r.unparsed.length > 1 ? "s" : ""} couldn't be read (no year found)</summary><ul class="rows">${r.unparsed.map(t => `<li><div class="d">${esc(t.slice(0, 260))}</div></li>`).join("")}</ul></details>`;
+  } else {
+    h += `<h3>Cited numbers with no reference</h3>`;
+    h += miss ? `<ul class="rows">${r.missing.map(m => `<li><div class="t">[${m.n}]</div><div class="ctx">${esc(m.ctx)}</div></li>`).join("")}</ul>` : `<p class="sum">None.</p>`;
+    h += `<h3>References never cited</h3>`;
+    h += unc ? `<ul class="rows">${r.uncited.map(u => `<li><div class="t">[${u.n}]</div><div class="d">${esc(u.text.slice(0, 260))}</div></li>`).join("")}</ul>` : `<p class="sum">None.</p>`;
+    if (r.outOfOrder) h += `<div class="msg warn">Citations are not numbered in order of first appearance: [${r.outOfOrder.jump}] appears before [${r.outOfOrder.expected}] is cited. This matters only if your journal uses order-of-appearance numbering (for example Vancouver style).</div>`;
+    if (r.dupNums.length) h += `<div class="msg warn">These numbers appear more than once in the reference list: ${[...new Set(r.dupNums)].join(", ")}.</div>`;
+  }
+  $("#rBody").innerHTML = h;
+  $("#report").hidden = false;
+}
+
+$("#go").addEventListener("click", async () => {
+  $("#err").textContent = ""; $("#report").hidden = true; $("#go").disabled = true;
+  try {
+    let body, refs;
+    if (!$("#p-paste").hidden){
+      const bodyBlocks = PL.textBlocks($("#body").value);
+      const refText = $("#refs").value.trim();
+      if (refText){ body = bodyBlocks; refs = refText.split(/\r?\n/); }
+      else { const s = splitBodyRefs(bodyBlocks); if (!s) throw new Error("No reference list found. Paste it into the Reference list box, or make sure the text has a line that says \"References\"."); body = s.body; refs = s.refs; }
+    } else {
+      $("#status").textContent = "Reading the Word file…";
+      const blocks = await PL.docxBlocks(await file.arrayBuffer());
+      const s = splitBodyRefs(blocks);
+      if (!s) throw new Error("Couldn't find a heading called References, Bibliography, or Works Cited. Check the heading, or use Paste text.");
+      body = s.body; refs = s.refs;
+    }
+    if (!refs.filter(x => x.trim()).length) throw new Error("The reference list looks empty.");
+    render(analyze(body, refs));
+  } catch(e){ console.error(e); $("#err").textContent = e.message || String(e); }
+  finally { $("#status").textContent = ""; refresh(); }
+});
+window.__cm = { analyze, citesAD, parseRefAD, splitBodyRefs };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thesis Search: theses from Bangladeshi universities in one place | Paperlight</title>
+<meta name="description" content="Search theses from BUET, University of Dhaka, KUET, BRAC University and more in one place, then continue worldwide. Links to the original repositories.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+main{max-width:1000px}
+.topnav,.sitefoot{max-width:1000px}
+.searchbar{display:flex;gap:8px}
+.searchbar input{font-size:17px;padding:14px 16px;flex:1}
+.searchbar button{appearance:none;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:600 15px/1 "IBM Plex Sans",system-ui,sans-serif;padding:0 20px;cursor:pointer}
+.try{font-size:14px;color:var(--muted);margin-top:10px}
+.try button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 11px;margin:4px 4px 0 0;font:500 13px/1.3 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer}
+.stamp{font-size:13px;color:var(--muted);margin-top:12px}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:24px;margin-top:24px;align-items:start}
+@media (max-width:760px){.layout{grid-template-columns:1fr}}
+.side .fgroup{margin-bottom:18px}
+.side .lbl{font-size:13px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px}
+.side label.opt{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:4px 0;cursor:pointer}
+.side label.opt input{accent-color:var(--accent);margin-right:6px}
+.side label.opt span.n{color:var(--muted);font-variant-numeric:tabular-nums}
+.side .more{appearance:none;border:0;background:none;color:var(--accent);font:500 13px/1 "IBM Plex Sans",system-ui,sans-serif;padding:4px 0;cursor:pointer}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-bottom:6px}
+.bar select{width:auto;padding:6px 10px;font-size:14px}
+.res{padding:16px 0;border-bottom:1px solid var(--line)}
+.res h3{font:600 17px/1.35 "IBM Plex Sans",system-ui,sans-serif;margin:0 0 4px}
+.res h3 a{color:var(--ink);text-decoration:none}
+.res h3 a:hover{color:var(--accent);text-decoration:underline}
+.res .src{font-size:13px;color:var(--accent);word-break:break-all}
+.res .meta{font-size:14px;color:var(--muted);margin-top:4px}
+.res mark{background:var(--warn-soft);color:inherit;border-radius:3px;padding:0 2px}
+.res .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.res .tag{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--muted)}
+.pill{display:inline-block;margin-top:8px;margin-right:6px;font-size:13px;font-weight:500;border-radius:6px;padding:2px 8px;text-decoration:none}
+.pill.cited{color:var(--accent);background:var(--accent-soft)}
+.pill.full{color:var(--ink);background:var(--paper);border:1px solid var(--line)}
+.res .note{font-size:13px;color:var(--warn);margin-top:6px}
+.global{margin-top:28px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.global h2{font:700 20px/1.2 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 6px}
+.global .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.global .links a{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none}
+.global .links a:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Thesis Search</h1>
+  <p class="lede">Search theses from Bangladeshi universities in one place, then continue your search worldwide. Every result links to the original repository.</p>
+
+  <form class="searchbar" id="form" role="search">
+    <label for="q" style="position:absolute;left:-9999px">Search theses</label>
+    <input type="search" id="q" placeholder="Try: salinity, flood model, cyclone, GIS" autocomplete="off">
+    <button type="submit">Search</button>
+  </form>
+  <div class="try">Try: <button type="button">cyclone</button><button type="button">salinity</button><button type="button">flood</button><button type="button">arsenic drinking water</button><button type="button">GIS</button></div>
+  <div class="stamp" id="stamp">Loading the thesis index…</div>
+
+  <div class="layout">
+    <aside class="side" aria-label="Filters">
+      <div class="fgroup"><span class="lbl">Field</span><div id="fField"></div></div>
+      <div class="fgroup"><span class="lbl">University</span><div id="fUni"></div></div>
+      <div class="fgroup"><span class="lbl">Year</span><div id="fYear"></div></div>
+      <div class="fgroup"><span class="lbl">Degree</span><div id="fDeg"></div></div>
+      <div class="fgroup">
+        <label class="opt"><span><input type="checkbox" id="fFull">Full text available</span><span class="n" id="nFull"></span></label>
+        <label class="opt"><span><input type="checkbox" id="fCited">Cited in journals</span><span class="n" id="nCited"></span></label>
+        <label class="opt"><span><input type="checkbox" id="fChecked">Hand-checked only</span><span class="n" id="nChecked"></span></label>
+      </div>
+    </aside>
+    <section aria-live="polite">
+      <div class="bar"><span id="count"></span><label>Sort <select id="sort"><option value="rel">Most relevant</option><option value="new">Newest</option><option value="old">Oldest</option></select></label></div>
+      <div id="results"></div>
+      <button class="btn secondary" id="more" type="button" hidden>Show more</button>
+      <div class="global" id="global">
+        <h2>Search worldwide</h2>
+        <p class="help" id="globalMsg">Continue your search in international thesis indexes.</p>
+        <div id="globalResults"></div>
+        <div class="links" id="globalLinks"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="notes">
+    <h3>About this index</h3>
+    <p>Theses are collected automatically each week from the open repositories of Bangladeshi universities. Only titles, authors, years and links are stored; the theses stay on the universities' own websites.</p>
+    <p>For automatically collected theses, the field and topic tags are guessed from titles, so they can be wrong. "Hand-checked" theses were reviewed one by one.</p>
+    <p><b>Using a thesis well:</b> study its structure, questions and methods, then write your own. Copying without citing is plagiarism.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="theses.js"></script>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const fold = s => String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+const SYN = { gis: ["gis","geoinformatics","geographic"], flood: ["flood","inundation"], salinity: ["salinity","saline"], river: ["river","rivers"], model: ["model","modelling","modeling","models","simulation"], cyclone: ["cyclone","storm surge"] };
+const PAGE = 50;
+let T = [], shown = PAGE;
+const S = { q: "", field: new Set(), uni: new Set(), deg: new Set(), year: new Set(), cited: false, full: false, checked: false, sort: "rel", open: {} };
+const decade = y => !y ? "Year not listed" : y >= 2020 ? "2020 onwards" : y >= 2010 ? "2010s" : y >= 2000 ? "2000s" : "Before 2000";
+
+function prep(t){
+  t._title = fold(t.title); t._tags = fold([].concat(t.topics || [], t.methods || [], [t.field]).join(" ")); t._who = fold(t.author + " " + t.institution);
+  t.topics = t.topics || []; t.methods = t.methods || []; t.degree = t.degree || "Not listed"; t.field = t.field || "Other";
+  return t;
+}
+function terms(q){ return fold(q).split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1); }
+function score(t, ws){
+  if (!ws.length) return 1;
+  let s = 0, hit = 0;
+  for (const w of ws){
+    let got = 0;
+    for (const v of SYN[w] || [w]){
+      if (t._title.includes(v)) got = Math.max(got, new RegExp("\\b" + v).test(t._title) ? 3 : 2);
+      if (t._tags.includes(v)) got = Math.max(got, 2);
+      if (t._who.includes(v)) got = Math.max(got, 1);
+    }
+    if (got) hit++; s += got;
+  }
+  return hit === ws.length ? s + 10 : hit ? s : 0;
+}
+function hl(text, ws){
+  let out = esc(text);
+  ws.flatMap(w => SYN[w] || [w]).forEach(v => { out = out.replace(new RegExp("\\b(" + v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\\p{L}]*)", "giu"), "<mark>$1</mark>"); });
+  return out;
+}
+function facet(el, key, vals, set){
+  const lim = S.open[key] ? 999 : 6;
+  el.innerHTML = vals.slice(0, lim).map(([v, n]) => `<label class="opt"><span><input type="checkbox" value="${esc(v)}" ${set.has(v) ? "checked" : ""}>${esc(v)}</span><span class="n">${n.toLocaleString()}</span></label>`).join("")
+    + (vals.length > 6 ? `<button type="button" class="more">${S.open[key] ? "Show fewer" : `Show all ${vals.length}`}</button>` : "");
+  el.querySelectorAll("input").forEach(i => i.addEventListener("change", () => { i.checked ? set.add(i.value) : set.delete(i.value); shown = PAGE; draw(); }));
+  const m = el.querySelector(".more"); if (m) m.addEventListener("click", () => { S.open[key] = !S.open[key]; draw(); });
+}
+function counts(list, fn){ const m = new Map(); list.forEach(t => { const v = fn(t); m.set(v, (m.get(v) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1]); }
+
+function draw(){
+  const ws = terms(S.q);
+  const base = [];
+  for (const t of T){ const s = score(t, ws); if (s > 0) base.push({ t, s }); }
+  const pass = (t, skip) => (skip === "field" || !S.field.size || S.field.has(t.field)) && (skip === "uni" || !S.uni.size || S.uni.has(t.uni)) && (skip === "deg" || !S.deg.size || S.deg.has(t.degree)) && (skip === "year" || !S.year.size || S.year.has(decade(t.year))) && (!S.cited || t.citedIn) && (!S.full || t.fullText) && (!S.checked || !t.auto);
+  facet($("#fField"), "field", counts(base.filter(x => pass(x.t, "field")).map(x => x.t), t => t.field), S.field);
+  facet($("#fUni"), "uni", counts(base.filter(x => pass(x.t, "uni")).map(x => x.t), t => t.uni), S.uni);
+  facet($("#fYear"), "year", counts(base.filter(x => pass(x.t, "year")).map(x => x.t), t => decade(t.year)), S.year);
+  facet($("#fDeg"), "deg", counts(base.filter(x => pass(x.t, "deg")).map(x => x.t), t => t.degree), S.deg);
+  const res = base.filter(x => pass(x.t));
+  $("#nFull").textContent = base.filter(x => x.t.fullText).length.toLocaleString();
+  $("#nCited").textContent = base.filter(x => x.t.citedIn).length.toLocaleString();
+  $("#nChecked").textContent = base.filter(x => !x.t.auto).length.toLocaleString();
+  res.sort((a, b) => S.sort === "new" ? (b.t.year || 0) - (a.t.year || 0) : S.sort === "old" ? (a.t.year || 9999) - (b.t.year || 9999) : (b.s - a.s) || ((b.t.auto ? 0 : 1) - (a.t.auto ? 0 : 1)) || ((b.t.year || 0) - (a.t.year || 0)));
+  $("#count").textContent = S.q ? `${res.length.toLocaleString()} thes${res.length === 1 ? "is" : "es"} for "${S.q}"` : `${res.length.toLocaleString()} theses`;
+  $("#results").innerHTML = res.slice(0, shown).map(({ t }) => `<article class="res">
+    <div class="src">${esc(t.url.replace(/^https?:\/\//, "").split("/")[0])} · ${esc(t.institution)}</div>
+    <h3><a href="${esc(t.url)}" target="_blank" rel="noopener">${hl(t.title, ws)}</a></h3>
+    <div class="meta">${esc(t.author)}${t.year ? " · " + t.year : ""}${t.degree !== "Not listed" ? " · " + esc(t.degree) : ""} · ${esc(t.field)}</div>
+    ${t.topics.length || t.methods.length ? `<div class="tags">${t.topics.concat(t.methods).map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>` : ""}
+    ${t.citedIn ? `<a class="pill cited" href="${esc(t.citedIn.url)}" target="_blank" rel="noopener">Cited in ${esc(t.citedIn.label)}</a>` : ""}${t.fullText ? `<span class="pill full">Full text PDF</span>` : ""}
+    ${t.note && !/Full-text PDF/.test(t.note) ? `<div class="note">${esc(t.note)}</div>` : ""}
+  </article>`).join("") || `<p class="sum" style="padding:16px 0">No Bangladeshi theses match yet. Try the worldwide search below.</p>`;
+  $("#more").hidden = res.length <= shown;
+  $("#more").textContent = `Show more (${(res.length - shown).toLocaleString()} left)`;
+  drawGlobal();
+}
+$("#more").addEventListener("click", () => { shown += PAGE; draw(); });
+
+let gTimer = null, gLast = "";
+function drawGlobal(){
+  const q = S.q.trim();
+  $("#globalLinks").innerHTML = [
+    ["Google Scholar", "https://scholar.google.com/scholar?q=" + encodeURIComponent((q || "Bangladesh") + " thesis")],
+    ["BASE (filter by Thesis)", "https://www.base-search.net/Search/Results?lookfor=" + encodeURIComponent(q || "Bangladesh")],
+    ["OATD", "https://oatd.org/oatd/search?q=" + encodeURIComponent(q || "Bangladesh")],
+    ["EThOS (UK)", "https://ethos.bl.uk"]
+  ].map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener">${n} →</a>`).join("");
+  if (q === gLast) return; gLast = q;
+  clearTimeout(gTimer);
+  if (!q){ $("#globalResults").innerHTML = ""; $("#globalMsg").textContent = "Continue your search in international thesis indexes."; return; }
+  gTimer = setTimeout(() => liveGlobal(q), 500);
+}
+async function liveGlobal(q){
+  const box = $("#globalResults");
+  box.innerHTML = `<p class="help">Searching OpenAlex…</p>`;
+  try {
+    const r = await fetch("https://api.openalex.org/works?per_page=8&filter=type:dissertation&search=" + encodeURIComponent(q));
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json(), items = d.results || [];
+    $("#globalMsg").textContent = `${((d.meta && d.meta.count) || items.length).toLocaleString()} theses worldwide in OpenAlex. Top results:`;
+    box.innerHTML = items.map(w => {
+      const url = (w.primary_location && w.primary_location.landing_page_url) || w.doi || w.id;
+      const who = (w.authorships || []).slice(0, 2).map(a => a.author && a.author.display_name).filter(Boolean).join(", ");
+      const src = w.primary_location && w.primary_location.source && w.primary_location.source.display_name;
+      return `<article class="res"><div class="src">${esc(src || "OpenAlex")}</div><h3><a href="${esc(url)}" target="_blank" rel="noopener">${esc(w.display_name || w.title)}</a></h3><div class="meta">${esc(who)}${w.publication_year ? " · " + w.publication_year : ""}</div></article>`;
+    }).join("") || `<p class="help">No worldwide results.</p>`;
+  } catch(e){
+    $("#globalMsg").textContent = "Live worldwide results couldn't load. Use these search engines instead:";
+    box.innerHTML = "";
+  }
+}
+
+let t; $("#q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { S.q = $("#q").value; shown = PAGE; draw(); }, 200); });
+$("#form").addEventListener("submit", e => { e.preventDefault(); S.q = $("#q").value; shown = PAGE; draw(); });
+document.querySelectorAll(".try button").forEach(b => b.addEventListener("click", () => { $("#q").value = b.textContent; S.q = b.textContent; shown = PAGE; draw(); }));
+[["#fCited", "cited"], ["#fFull", "full"], ["#fChecked", "checked"]].forEach(([id, k]) => $(id).addEventListener("change", e => { S[k] = e.target.checked; shown = PAGE; draw(); }));
+$("#sort").addEventListener("change", e => { S.sort = e.target.value; draw(); });
+
+(async function load(){
+  let data = null;
+  try { const r = await fetch("theses.json", { cache: "no-cache" }); if (r.ok){ const d = await r.json(); if (d.items && d.items.length) data = d; } } catch(e){}
+  T = (data ? data.items : (window.THESES || [])).map(prep);
+  const unis = new Set(T.map(x => x.uni)).size;
+  $("#stamp").textContent = data
+    ? `${T.length.toLocaleString()} theses from ${unis} universities · updated ${new Date(data.generated).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`
+    : `${T.length.toLocaleString()} hand-checked theses from ${unis} universities`;
+  const q = new URLSearchParams(location.search).get("q");
+  if (q){ $("#q").value = q; S.q = q; }
+  draw();
+})();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Response to reviewers builder: point-by-point table in Word | Paperlight</title>
+<meta name="description" content="Paste reviewer comments, write your responses, and download a clean point-by-point response letter or table as a Word file. Free and private.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+.step{font:700 22px/1.2 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 4px}
+.panel + .panel{margin-top:16px}
+.group{margin-top:28px}
+.group:first-child{margin-top:8px}
+.ghead{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.ghead input{font-weight:600;font-size:17px}
+.card{border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px;background:var(--surface)}
+.card .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.card .lab{font-weight:600;font-size:14px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:3px 9px}
+.card .acts{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.card .acts button{appearance:none;border:0;background:none;color:var(--muted);font:500 13px/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;padding:6px 8px;border-radius:6px}
+.card .acts button:hover{background:var(--paper);color:var(--ink)}
+.card label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:10px 0 4px}
+.card textarea{min-height:64px}
+.card textarea.cm{background:transparent;font-style:italic}
+.card.empty .rsp{border-color:var(--warn)}
+.savebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:10px}
+.progress{font-weight:500}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Response to reviewers</h1>
+  <p class="lede">Paste the reviewers' comments, write your response to each one, and download a clean point-by-point response as a Word file. Your draft is saved in this browser as you type.</p>
+
+  <div class="msg info" id="restored" hidden></div>
+
+  <section class="panel">
+    <h2 class="step">Paste the comments</h2>
+    <p class="help">Paste everything from the decision letter. Headings like "Reviewer 1", "Reviewer #2" or "Editor" start a new reviewer, and numbered points become separate comments.</p>
+    <div class="grid" style="margin-top:16px">
+      <div><label for="msTitle">Manuscript title</label><input type="text" id="msTitle"></div>
+      <div><label for="msId">Manuscript ID</label><input type="text" id="msId" placeholder="e.g. JCR-2026-0412"></div>
+      <div><label for="journal">Journal</label><input type="text" id="journal"></div>
+    </div>
+    <div class="field">
+      <label for="raw">Reviewer comments</label>
+      <textarea id="raw" style="min-height:200px" placeholder="Reviewer 1&#10;1. The introduction should explain...&#10;2. Table 2 is missing units...&#10;&#10;Reviewer 2&#10;..."></textarea>
+    </div>
+    <button class="btn" id="split" type="button" disabled>Split into comments</button>
+    <div class="msg" id="err"></div>
+  </section>
+
+  <section class="panel" id="edit" hidden>
+    <h2 class="step">Write your responses</h2>
+    <div class="savebar"><span class="progress" id="prog"></span><span id="saved"></span></div>
+    <div id="groups"></div>
+  </section>
+
+  <section class="panel" id="export" hidden>
+    <h2 class="step">Download</h2>
+    <div class="field">
+      <label for="intro">Opening note to the editor</label>
+      <textarea id="intro"></textarea>
+    </div>
+    <div class="field">
+      <span class="lbl">Layout</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="layout" value="table" checked><span>Table</span></label>
+        <label class="chip"><input type="radio" name="layout" value="letter"><span>Letter</span></label>
+      </div>
+      <p class="help" id="layoutHint" style="margin-top:10px"></p>
+      <label class="check" id="landBox"><input type="checkbox" id="landscape" checked><span>Landscape pages (more room for the table)</span></label>
+    </div>
+    <button class="btn" id="dl" type="button">Download Word file</button>
+    <button class="btn secondary" id="clear" type="button">Start a new response</button>
+    <div class="status" id="status" aria-live="polite"></div>
+  </section>
+
+  <section class="notes">
+    <h3>Good to know</h3>
+    <p>If the comments split in the wrong places, use Merge with previous or Delete, or edit the comment text directly. Empty responses are marked in the Word file so you don't miss any.</p>
+    <p>Your draft stays in this browser only. Clearing your browser data, or opening the page on another device, starts fresh, so download the Word file when you're done.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+(function(){
+const { $, esc } = PL;
+const KEY = "paperlight-response-v1";
+const DEFAULT_INTRO = "Dear Editor,\n\nThank you for the opportunity to revise our manuscript. We are grateful to the reviewers for their careful reading and helpful comments. We have addressed each point below, and the changes are marked in the revised manuscript.";
+let S = { title: "", id: "", journal: "", raw: "", intro: DEFAULT_INTRO, layout: "table", landscape: true, groups: [] };
+
+// ---------- storage ----------
+let saveT = null;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); $("#saved").textContent = "Draft saved in this browser"; }
+    catch(e){ $("#saved").textContent = "Couldn't save the draft in this browser"; }
+  }, 400);
+}
+function load(){
+  try { const v = localStorage.getItem(KEY); if (v){ const o = JSON.parse(v); if (o && Array.isArray(o.groups)) return o; } } catch(e){}
+  return null;
+}
+
+// ---------- parsing ----------
+const REV = /^\s*(?:[#*]+\s*)?((?:reviewer|referee)\s*(?:#|no\.?)?\s*(?:\d+|[A-Z](?![a-z])|one|two|three|four|five)|(?:associate\s+|academic\s+|handling\s+|guest\s+)?editor(?:[’']s)?(?:[\s-]+in[\s-]+chief)?)(?![a-z])/i;
+const ITEM = /^\s*(?:comment\s*#?\d+\s*[:.)\-–]?|\(?\d{1,3}[.)](?!\d)|\d{1,3}\s*[:\-–]\s|[•●▪◦*–-])\s*/i;
+function titleCase(s){ return s.replace(/[’']s$/i, "").replace(/\s+/g, " ").trim().replace(/^./, c => c.toUpperCase()); }
+function parse(text){
+  const groups = []; let cur = null;
+  for (const line of text.split(/\r?\n/)){
+    const m = line.trim().length < 80 ? line.match(REV) : null;
+    if (m && !/[.?]$/.test(line.trim()) ){ cur = { name: titleCase(m[1]), lines: [] }; groups.push(cur); const rest = line.slice(m.index + m[0].length).replace(/^[\s:.\-–]*(comments?(\s+to\s+the\s+authors?)?)?[\s:.\-–]*/i, ""); if (rest.trim().length > 20) cur.lines.push(rest); continue; }
+    if (!cur){ cur = { name: "Reviewer 1", lines: [] }; groups.push(cur); }
+    cur.lines.push(line);
+  }
+  const isLabel = t => t.length < 40 && /:\s*$/.test(t);
+  return groups.map(g => {
+    const numbered = g.lines.filter(l => ITEM.test(l) && l.trim().length > 3).length;
+    let chunks = [];
+    if (numbered >= 2){
+      let buf = null;
+      g.lines.forEach(l => {
+        const t = l.trim();
+        if (!t){ return; }
+        if (ITEM.test(l)){ if (buf) chunks.push(buf); buf = t.replace(ITEM, ""); }
+        else if (isLabel(t)){ if (buf) chunks.push(buf); buf = null; }
+        else buf = buf === null ? t : buf + (buf.endsWith("\n") ? "" : " ") + t;
+      });
+      if (buf) chunks.push(buf);
+    } else {
+      chunks = g.lines.join("\n").split(/\n\s*\n/).map(p => p.split("\n").map(s => s.trim()).filter(Boolean).join(" ")).filter(p => p && !isLabel(p));
+    }
+    chunks = chunks.map(c => c.trim()).filter(c => c.length > 2);
+    return { name: g.name, comments: chunks.map(c => ({ c, r: "", ch: "" })) };
+  }).filter(g => g.comments.length);
+}
+
+// ---------- editor ----------
+function labels(){
+  let k = 0;
+  return S.groups.map(g => /editor/i.test(g.name) ? "E" : "R" + (++k));
+}
+function autosize(t){ t.style.height = "auto"; t.style.height = Math.min(600, t.scrollHeight + 2) + "px"; }
+function progress(){
+  const all = S.groups.flatMap(g => g.comments), done = all.filter(c => c.r.trim()).length;
+  $("#prog").textContent = `${done} of ${all.length} comments answered`;
+}
+function render(){
+  const L = labels(), box = $("#groups"); box.innerHTML = "";
+  S.groups.forEach((g, gi) => {
+    const G = document.createElement("div"); G.className = "group";
+    G.innerHTML = `<div class="ghead"><input type="text" aria-label="Reviewer name" value="${esc(g.name)}"></div>`;
+    G.querySelector("input").addEventListener("input", e => { g.name = e.target.value; save(); });
+    G.querySelector("input").addEventListener("change", () => render());
+    g.comments.forEach((c, ci) => {
+      const id = `c${gi}-${ci}`, lab = `${L[gi]}.${ci + 1}`;
+      const C = document.createElement("div"); C.className = "card" + (c.r.trim() ? "" : " empty");
+      C.innerHTML = `<div class="top"><span class="lab">${lab}</span><div class="acts">
+          ${ci > 0 ? `<button type="button" data-a="merge">Merge with previous</button>` : ""}
+          <button type="button" data-a="add">Add below</button><button type="button" data-a="del">Delete</button></div></div>
+        <label for="${id}c">Comment</label><textarea class="cm" id="${id}c">${esc(c.c)}</textarea>
+        <label for="${id}r">Your response</label><textarea class="rsp" id="${id}r" placeholder="Thank you for this comment. We have...">${esc(c.r)}</textarea>
+        <label for="${id}h">Change in the manuscript (optional)</label><input type="text" id="${id}h" value="${esc(c.ch)}" placeholder="e.g. Section 2.3, lines 140–152">`;
+      const [tc, tr] = C.querySelectorAll("textarea"), th = C.querySelector("input");
+      tc.addEventListener("input", () => { c.c = tc.value; autosize(tc); save(); });
+      tr.addEventListener("input", () => { c.r = tr.value; autosize(tr); C.classList.toggle("empty", !c.r.trim()); progress(); save(); });
+      th.addEventListener("input", () => { c.ch = th.value; save(); });
+      C.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+        const a = b.dataset.a;
+        if (a === "del"){ if ((c.r.trim() || c.c.trim()) && !confirm(`Delete comment ${lab}?`)) return; g.comments.splice(ci, 1); if (!g.comments.length) S.groups.splice(gi, 1); }
+        if (a === "merge"){ const p = g.comments[ci - 1]; p.c = p.c + "\n" + c.c; p.r = [p.r, c.r].filter(x => x.trim()).join("\n"); p.ch = [p.ch, c.ch].filter(x => x.trim()).join("; "); g.comments.splice(ci, 1); }
+        if (a === "add") g.comments.splice(ci + 1, 0, { c: "", r: "", ch: "" });
+        save(); render();
+      }));
+      G.append(C);
+    });
+    box.append(G);
+  });
+  $("#edit").hidden = $("#export").hidden = !S.groups.length;
+  requestAnimationFrame(() => box.querySelectorAll("textarea").forEach(autosize));
+  progress();
+}
+
+// ---------- fields ----------
+const bind = (sel, key) => { $(sel).value = S[key] || ""; $(sel).addEventListener("input", e => { S[key] = e.target.value; save(); if (sel === "#raw") $("#split").disabled = !S.raw.trim(); }); };
+function initFields(){
+  bind("#msTitle", "title"); bind("#msId", "id"); bind("#journal", "journal"); bind("#raw", "raw"); bind("#intro", "intro");
+  document.querySelector(`input[name=layout][value=${S.layout}]`).checked = true;
+  $("#landscape").checked = S.landscape !== false;
+  $("#split").disabled = !S.raw.trim();
+  layoutUI();
+}
+function layoutUI(){
+  $("#layoutHint").textContent = S.layout === "table" ? "A table with columns for the comment, your response, and the change made. Easy for reviewers to scan." : "Each comment followed by your response, as a letter. Some journals prefer this.";
+  $("#landBox").hidden = S.layout !== "table";
+}
+document.querySelectorAll("input[name=layout]").forEach(r => r.addEventListener("change", e => { S.layout = e.target.value; layoutUI(); save(); }));
+$("#landscape").addEventListener("change", e => { S.landscape = e.target.checked; save(); });
+
+$("#split").addEventListener("click", () => {
+  $("#err").textContent = "";
+  const hasWork = S.groups.some(g => g.comments.some(c => c.r.trim()));
+  if (hasWork && !confirm("Splitting again replaces your current comments and responses. Continue?")) return;
+  const g = parse(S.raw);
+  if (!g.length){ $("#err").textContent = "No comments were found in the pasted text."; return; }
+  S.groups = g; save(); render();
+  $("#edit").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("#clear").addEventListener("click", () => {
+  if (!confirm("Clear everything and start a new response? Download your Word file first if you need it.")) return;
+  try { localStorage.removeItem(KEY); } catch(e){}
+  S = { title: "", id: "", journal: "", raw: "", intro: DEFAULT_INTRO, layout: "table", landscape: true, groups: [] };
+  initFieldsValues(); render(); $("#restored").hidden = true; window.scrollTo({ top: 0 });
+});
+function initFieldsValues(){ ["#msTitle","#msId","#journal","#raw","#intro"].forEach((s, i) => $(s).value = S[["title","id","journal","raw","intro"][i]] || ""); $("#split").disabled = true; }
+
+// ---------- Word export ----------
+function runs(D, text, opts = {}){
+  const out = [];
+  String(text).split("\n").forEach((line, i) => out.push(new D.TextRun({ text: line, break: i ? 1 : 0, ...opts })));
+  return out;
+}
+function paras(D, text, opts = {}, pOpts = {}){
+  return String(text).split(/\n\s*\n/).map(p => new D.Paragraph({ children: runs(D, p.trim(), opts), spacing: { after: 120 }, ...pOpts }));
+}
+async function exportDocx(){
+  const D = window.docx; if (!D) throw new Error("The Word library didn't load. Check your connection and reload.");
+  const L = labels(), kids = [];
+  kids.push(new D.Paragraph({ heading: D.HeadingLevel.TITLE, children: [new D.TextRun("Response to reviewers")] }));
+  [["Manuscript", S.title], ["Manuscript ID", S.id], ["Journal", S.journal]].forEach(([k, v]) => { if (v && v.trim()) kids.push(new D.Paragraph({ children: [new D.TextRun({ text: k + ": ", bold: true }), new D.TextRun(v.trim())], spacing: { after: 60 } })); });
+  kids.push(new D.Paragraph(""));
+  if (S.intro.trim()) kids.push(...paras(D, S.intro.trim()));
+  const TODO = { text: "[Response to be added]", highlight: "yellow" };
+  const border = { style: D.BorderStyle.SINGLE, size: 4, color: "A6A6A6" };
+  const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
+  const cell = (children, w, shade) => new D.TableCell({ children, width: { size: w, type: D.WidthType.PERCENTAGE }, margins: { top: 80, bottom: 80, left: 100, right: 100 }, ...(shade ? { shading: { fill: "E7EEF0", type: D.ShadingType.CLEAR, color: "auto" } } : {}) });
+  const cp = (text, opts) => text.trim() ? String(text).trim().split(/\n\s*\n/).map(p => new D.Paragraph({ children: runs(D, p, opts), spacing: { after: 80 } })) : [new D.Paragraph("")];
+  S.groups.forEach((g, gi) => {
+    kids.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, children: [new D.TextRun(g.name || "Reviewer")], spacing: { before: 360, after: 160 } }));
+    if (S.layout === "table"){
+      const W = [8, 36, 36, 20];
+      const head = new D.TableRow({ tableHeader: true, children: ["No.", "Reviewer comment", "Our response", "Change in the manuscript"].map((t, i) => cell([new D.Paragraph({ children: [new D.TextRun({ text: t, bold: true })] })], W[i], true)) });
+      const rows = g.comments.map((c, ci) => new D.TableRow({ cantSplit: false, children: [
+        cell([new D.Paragraph({ children: [new D.TextRun({ text: `${L[gi]}.${ci + 1}`, bold: true })] })], W[0]),
+        cell(cp(c.c, { italics: true }), W[1]),
+        cell(c.r.trim() ? cp(c.r) : [new D.Paragraph({ children: [new D.TextRun(TODO)] })], W[2]),
+        cell(cp(c.ch), W[3])
+      ] }));
+      kids.push(new D.Table({ rows: [head, ...rows], width: { size: 100, type: D.WidthType.PERCENTAGE }, borders }));
+    } else {
+      g.comments.forEach((c, ci) => {
+        kids.push(new D.Paragraph({ children: [new D.TextRun({ text: `Comment ${L[gi]}.${ci + 1}`, bold: true })], spacing: { before: 240, after: 80 }, keepNext: true }));
+        kids.push(...paras(D, c.c, { italics: true }, { indent: { left: 360 } }));
+        kids.push(new D.Paragraph({ children: [new D.TextRun({ text: "Response: ", bold: true }), ...(c.r.trim() ? runs(D, c.r.trim()) : [new D.TextRun(TODO)])], spacing: { after: 80 } }));
+        if (c.ch.trim()) kids.push(new D.Paragraph({ children: [new D.TextRun({ text: "Change in the manuscript: ", bold: true }), new D.TextRun(c.ch.trim())], spacing: { after: 120 } }));
+      });
+    }
+  });
+  const land = S.layout === "table" && S.landscape !== false;
+  const doc = new D.Document({
+    creator: "", title: "Response to reviewers",
+    styles: { default: { document: { run: { font: "Calibri", size: 22 } } } },
+    sections: [{ properties: { page: { size: land ? { orientation: D.PageOrientation.LANDSCAPE } : {}, margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 } } }, children: kids }]
+  });
+  return D.Packer.toBlob(doc);
+}
+$("#dl").addEventListener("click", async () => {
+  $("#status").textContent = "Creating the Word file…";
+  try {
+    const blob = await exportDocx();
+    const name = "Response to reviewers" + (S.id.trim() ? " - " + S.id.trim().replace(/[\\/:*?"<>|]/g, "") : "") + ".docx";
+    const r = await PL.saveFile(blob, name);
+    const all = S.groups.flatMap(g => g.comments), empty = all.filter(c => !c.r.trim()).length;
+    $("#status").textContent = r === "declined" ? "Download cancelled." : empty ? `Downloaded. ${empty} response${empty > 1 ? "s are" : " is"} still empty and marked in yellow.` : "Downloaded.";
+  } catch(e){ console.error(e); $("#status").textContent = "Couldn't create the file: " + (e.message || e); }
+});
+
+// ---------- start ----------
+const prev = load();
+if (prev){ S = Object.assign(S, prev); if (S.groups.length){ $("#restored").textContent = "Your saved draft has been restored."; $("#restored").hidden = false; } }
+initFields(); render();
+window.__rb = { parse, get S(){ return S; } };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manuscript word counter: count main text without references | Paperlight</title>
+<meta name="description" content="Count the words in your manuscript section by section, excluding references, abstract, captions and tables, the way journals ask. Free and private.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/base.css">
+<style>
+.total{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:4px 0 20px}
+.total b{font:700 clamp(48px,10vw,72px)/1 "Bricolage Grotesque",system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.total span{color:var(--muted)}
+.limit{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;font-size:15px}
+.limit input{width:130px}
+table.data td:first-child{width:36px}
+table.data input{width:18px;height:18px;accent-color:var(--accent)}
+tr.sub td{color:var(--muted);font-size:14px;padding-top:4px;padding-bottom:4px}
+tr.sub td:nth-child(2){padding-left:24px}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site"><a class="brand" href="../">Paperlight</a><a href="../">All tools</a></nav>
+<main>
+  <h1>Word counter</h1>
+  <p class="lede">Count your manuscript the way journals do. See the words in each part of the paper, then choose what counts toward the limit.</p>
+
+  <div class="tabs" role="tablist" aria-label="Input">
+    <button role="tab" id="t-file" aria-controls="p-file" aria-selected="true">Word file</button>
+    <button role="tab" id="t-paste" aria-controls="p-paste" aria-selected="false">Paste text</button>
+  </div>
+
+  <section class="panel">
+    <div id="p-file" role="tabpanel" aria-labelledby="t-file">
+      <label class="drop" id="drop">
+        <input type="file" id="pick" accept=".docx">
+        <strong>Choose your manuscript</strong>
+        <span>Word (.docx), or drag it here</span>
+      </label>
+      <div class="file" id="fileRow"><div class="name" id="fileName"></div><div class="size" id="fileSize"></div><button class="linkbtn" id="change" type="button">Change</button><button class="xbtn" id="remove" type="button" aria-label="Remove file" title="Remove file">×</button></div>
+    </div>
+    <div id="p-paste" role="tabpanel" aria-labelledby="t-paste" hidden>
+      <label for="paste" class="help" style="display:block">Paste your paper, keeping each heading on its own line.</label>
+      <textarea id="paste" style="min-height:200px"></textarea>
+    </div>
+    <button class="btn" id="go" type="button" disabled>Count words</button>
+    <div class="msg" id="err"></div>
+
+    <div class="report" id="report" hidden>
+      <div class="total"><b id="total">0</b><span id="totalLbl">words counted</span></div>
+      <div class="limit"><label for="limit">Journal limit</label><input type="number" id="limit" min="0" step="100" placeholder="e.g. 8000"><span id="limitMsg"></span></div>
+      <div class="tablewrap">
+        <table class="data">
+          <thead><tr><th><span class="sr" style="position:absolute;left:-9999px">Include</span></th><th>Part of the paper</th><th class="num">Words</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="help" style="margin-top:14px" id="allNote"></p>
+      <div class="msg warn" id="warnMsg"></div>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h3>How parts are detected</h3>
+    <p>Sections are found from headings such as Abstract, References, Acknowledgements and Appendix. Captions are paragraphs starting with "Figure 1" or "Table 2". Using Word's heading styles, or putting headings in bold on their own line, gives the most accurate split.</p>
+    <p>Journals differ on what counts. Some include the abstract, headings or captions, and most exclude references. Check the author guidelines, then tick the parts that apply. Counts can differ slightly from Word's own count because of how hyphens and symbols are treated.</p>
+  </section>
+</main>
+<footer class="sitefoot">Part of <a href="../">Paperlight</a>, free tools that run on your device. <a href="../credits.html">Credits</a></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="../assets/common.js"></script>
+<script>
+(function(){
+const { $, esc } = PL;
+PL.tabs();
+let file = null;
+const refresh = () => { $("#go").disabled = $("#p-paste").hidden ? !file : !$("#paste").value.trim(); };
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", refresh));
+$("#paste").addEventListener("input", refresh);
+PL.wireDrop($("#drop"), $("#pick"), files => {
+  const f = files[0]; $("#err").textContent = "";
+  if (!/\.docx$/i.test(f.name)){ $("#err").textContent = /\.doc$/i.test(f.name) ? "This is an older .doc file. Save it as .docx first, or use Paste text." : "Please choose a .docx file."; return; }
+  file = f; $("#drop").style.display = "none"; $("#fileRow").classList.add("show");
+  $("#fileName").textContent = f.name; $("#fileSize").textContent = PL.fmt(f.size); refresh();
+});
+$("#change").addEventListener("click", () => $("#pick").click());
+$("#remove").addEventListener("click", () => { file = null; $("#fileRow").classList.remove("show"); $("#drop").style.display = ""; $("#report").hidden = true; $("#err").textContent = ""; refresh(); });
+
+const CATS = [
+  ["front", "Title page (title, authors, affiliations)", false],
+  ["abstract", "Abstract", false],
+  ["keywords", "Keywords", false],
+  ["main", "Main text", true],
+  ["headings", "Section headings", true],
+  ["captions", "Figure and table captions", false],
+  ["tables", "Text inside tables", false],
+  ["notes", "Footnotes and endnotes", false],
+  ["backmatter", "Acknowledgements, funding and declarations", false],
+  ["references", "References", false],
+  ["appendix", "Appendices and supplementary", false]
+];
+const strip = h => h.replace(/^(\d+(\.\d+)*\.?|[IVX]+\.)\s*/, "").replace(/[:.]$/, "").trim();
+const CAPTION = /^(figure|fig\.?|table|plate|scheme|box)\s*S?\d+[a-z]?\s*[.:|\-–]/i;
+
+function classify(blocks){
+  let cur = "front", mainHeading = "Before the first heading", frontHeads = 0;
+  const counts = {}, mainParts = [], mainIdx = new Map();
+  CATS.forEach(c => counts[c[0]] = 0);
+  const addMain = (n) => { if (!mainIdx.has(mainHeading)){ mainIdx.set(mainHeading, mainParts.length); mainParts.push([mainHeading, 0]); } mainParts[mainIdx.get(mainHeading)][1] += n; };
+  for (const b of blocks){
+    const n = PL.countWords(b.text);
+    if (b.kind === "cell"){ counts.tables += n; continue; }
+    if (b.kind === "note"){ counts.notes += n; continue; }
+    const h = PL.isHeading(b);
+    if (h){
+      const s = strip(h).toLowerCase();
+      if (/^(abstract|summary)$/.test(s)) cur = "abstract";
+      else if (/^(keywords?|key\s*words)$/.test(s)) cur = "keywords";
+      else if (PL.REF_HEAD_RE.test(s)) cur = "references";
+      else if (/^(appendix|appendices|supplementary)/.test(s)) cur = "appendix";
+      else if (/^(acknowledg|funding|conflicts?\s+of|competing|declaration|data\s+availability|author\s+contribution|credit\s+authorship|ethics)/.test(s)) cur = "backmatter";
+      else {
+        const introish = /^(introduction|background|overview|rationale)/.test(s) || /^(\d+(\.\d+)*\.?|[IVX]+\.)\s/.test(h);
+        if (cur === "front" && !introish && !frontHeads++){ counts.front += n; continue; } // first unnumbered heading = title
+        if (["front","abstract","keywords","backmatter"].includes(cur)) cur = "main";
+        if (cur === "main") mainHeading = strip(h);
+      }
+      if (["front","abstract","keywords","references","appendix","backmatter"].includes(cur) && cur !== "main") counts[cur] += 0; // heading words of special sections not counted
+      else counts.headings += n;
+      continue;
+    }
+    if (/^(keywords?|key\s*words)\s*[:\-–]/i.test(b.text)){ counts.keywords += PL.countWords(b.text.replace(/^[^:\-–]+[:\-–]/, "")); continue; }
+    if (/^(abstract|summary)\s*[:.\-–]\s*\S/i.test(b.text) && (cur === "front" || cur === "abstract")){ cur = "abstract"; counts.abstract += PL.countWords(b.text.replace(/^\w+\s*[:.\-–]/, "")); continue; }
+    if (CAPTION.test(b.text) && b.text.length < 1500){ counts.captions += n; continue; }
+    counts[cur] += n;
+    if (cur === "main") addMain(n);
+  }
+  // No headings at all: treat everything as main text.
+  if (!counts.main && counts.front){ counts.main = counts.front; counts.front = 0; mainParts.length = 0; }
+  return { counts, mainParts };
+}
+
+let state = null;
+function draw(){
+  const { counts, mainParts } = state;
+  const body = $("#tbody"); body.innerHTML = "";
+  CATS.forEach(([id, label, def]) => {
+    if (!counts[id]) return;
+    const tr = document.createElement("tr");
+    const checked = state.include[id] ?? def;
+    tr.innerHTML = `<td><input type="checkbox" id="c-${id}" ${checked ? "checked" : ""} aria-label="Include ${esc(label)}"></td><td><label for="c-${id}">${esc(label)}</label></td><td class="num">${counts[id].toLocaleString()}</td>`;
+    body.append(tr);
+    tr.querySelector("input").addEventListener("change", e => { state.include[id] = e.target.checked; total(); });
+    if (id === "main" && mainParts.length > 1) mainParts.forEach(([name, n]) => {
+      const s = document.createElement("tr"); s.className = "sub";
+      s.innerHTML = `<td></td><td>${esc(name)}</td><td class="num">${n.toLocaleString()}</td>`; body.append(s);
+    });
+  });
+  const all = Object.values(counts).reduce((a, b) => a + b, 0);
+  $("#allNote").textContent = `Whole document: about ${all.toLocaleString()} words, close to what Word would show.` + (counts.abstract ? ` Abstract alone: ${counts.abstract.toLocaleString()} words.` : "");
+  const w = [];
+  if (!counts.references) w.push("No References section was found, so references may be counted inside another part.");
+  if (!counts.abstract) w.push("No abstract was detected.");
+  $("#warnMsg").textContent = w.join(" ");
+  total();
+}
+function total(){
+  const t = CATS.reduce((a, [id, , def]) => a + ((state.include[id] ?? def) ? state.counts[id] : 0), 0);
+  $("#total").textContent = t.toLocaleString();
+  const lim = parseFloat($("#limit").value), m = $("#limitMsg");
+  if (lim > 0){
+    const d = lim - t;
+    m.textContent = d >= 0 ? `${d.toLocaleString()} words under the limit` : `${(-d).toLocaleString()} words over the limit`;
+    m.style.color = d >= 0 ? "var(--accent)" : "var(--bad)"; m.style.fontWeight = "600";
+  } else m.textContent = "";
+}
+$("#limit").addEventListener("input", () => state && total());
+
+$("#go").addEventListener("click", async () => {
+  $("#err").textContent = ""; $("#go").disabled = true;
+  try {
+    const blocks = $("#p-paste").hidden ? await PL.docxBlocks(await file.arrayBuffer()) : PL.textBlocks($("#paste").value);
+    if (!blocks.length) throw new Error("No text was found.");
+    state = { ...classify(blocks), include: {} };
+    draw(); $("#report").hidden = false;
+  } catch(e){ console.error(e); $("#err").textContent = e.message || String(e); }
+  finally { refresh(); }
+});
+})();
+</script>
+</body>
+</html>
