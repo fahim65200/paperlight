@@ -108,6 +108,7 @@ const S = { q: "", field: new Set(), uni: new Set(), deg: new Set(), year: new S
 const decade = y => !y ? "Year not listed" : y >= 2020 ? "2020 onwards" : y >= 2010 ? "2010s" : y >= 2000 ? "2000s" : "Before 2000";
 
 function prep(t){
+    t.url = t.url.replace(/^https?:\/\/dspace\.bracu\.ac\.bd\/xmlui\//, "https://dspace.bracu.ac.bd/");
   t._title = fold(t.title); t._tags = fold([].concat(t.topics || [], t.methods || [], [t.field]).join(" ")); t._who = fold(t.author + " " + t.institution);
   t.topics = t.topics || []; t.methods = t.methods || []; t.degree = t.degree || "Not listed"; t.field = t.field || "Other";
   return t;
