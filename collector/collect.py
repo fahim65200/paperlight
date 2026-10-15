@@ -107,13 +107,35 @@ def harvest_oai(src):
     return items
 
 # ---------------- DSpace 7 REST ----------------
+def dspace7_uuid(api, handle):
+    data = json.loads(get(f"{api}/pid/find?id={urllib.parse.quote(handle)}", "application/json"))
+    return data.get("uuid") or data.get("id")
+
 def harvest_dspace7(src):
     api = src["dspace7"].rstrip("/")
     ui = api.rsplit("/server", 1)[0]
+    scopes = src.get("dspace7_scopes") or [None]
+    items, seen = [], set()
+    for sc in scopes:
+        scope_q, assume = "", False
+        if sc:
+            uuid = dspace7_uuid(api, sc["handle"])
+            scope_q, assume = f"&scope={uuid}", bool(sc.get("assume"))
+        got = harvest_dspace7_scope(api, ui, scope_q)
+        for g in got:
+            if g["url"] in seen:
+                continue
+            seen.add(g["url"])
+            if assume:
+                g["types"] = ["thesis (from repository collection)"]
+            items.append(g)
+    return items
+
+def harvest_dspace7_scope(api, ui, scope_q):
     items, page, total_pages = [], 0, 1
     while page < total_pages and page < MAX_PAGES:
         try:
-            data = json.loads(get(f"{api}/discover/search/objects?dsoType=ITEM&size=100&page={page}&sort=dc.date.issued,DESC", "application/json"))
+            data = json.loads(get(f"{api}/discover/search/objects?dsoType=ITEM&size=100&page={page}&sort=dc.date.issued,DESC{scope_q}", "application/json"))
         except Exception as e:
             if items:
                 log(f"    DSpace 7 stopped early after {len(items)} records: {e}")
@@ -161,7 +183,7 @@ def parse_xmlui(page_html, base):
 def harvest_xmlui(src):
     base = src["xmlui"].rstrip("/")
     scopes = src.get("xmlui_scopes") or [{"path": c, "assume": True} for c in src.get("xmlui_collections") or []] or [{"path": ""}]
-    items, seen = [], set()
+    items, seen, problems = [], set(), []
     for sc in scopes:
         root = f"{base}/handle/{sc['path']}" if sc.get("path") else base
         extra = f"&filtertype=type&filter_relational_operator=contains&filter={urllib.parse.quote(sc['type'])}" if sc.get("type") else ""
@@ -171,6 +193,7 @@ def harvest_xmlui(src):
                 got = [i for i in parse_xmlui(get(url, "text/html"), base) if i["url"] not in seen]
             except Exception as e:
                 log(f"    HTML scope {root} stopped: {e}")
+                problems.append(f"{type(e).__name__}: {str(e)[:120]}")
                 break
             if not got:
                 break
@@ -180,6 +203,8 @@ def harvest_xmlui(src):
                     i["types"] = ["thesis (from repository filter)"]
             items += got
             log(f"    HTML page {page} of {root}{' [type=' + sc['type'] + ']' if sc.get('type') else ''}: {len(items)} records so far")
+    if not items and problems:
+        raise RuntimeError(problems[0])
     return items
 
 METHODS = {"oai": harvest_oai, "dspace7": harvest_dspace7, "xmlui": harvest_xmlui}

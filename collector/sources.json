@@ -100,16 +100,13 @@
       "name": "MIST",
       "uni": "MIST",
       "enabled": true,
-      "merge_methods": true,
       "methods": [
-        "oai",
-        "xmlui"
+        "dspace7"
       ],
-      "oai": "https://dspace.mist.ac.bd/oai/request",
-      "xmlui": "https://dspace.mist.ac.bd/xmlui",
-      "xmlui_scopes": [
+      "dspace7": "https://dspace.mist.ac.bd/server/api",
+      "dspace7_scopes": [
         {
-          "path": "123456789/283",
+          "handle": "123456789/283",
           "assume": true
         }
       ],
